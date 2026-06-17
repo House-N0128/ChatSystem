@@ -1,0 +1,149 @@
+@{
+    ViewData["Title"] = "管理员面板";
+}
+
+<div class="mt-3">
+    <h3>🛡️ 管理员控制台</h3>
+    <hr>
+    <ul class="nav nav-tabs" id="adminTabs">
+        <li class="nav-item"><a class="nav-link active" href="#" onclick="showTab('pending')">待审核用户</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('allUsers')">所有用户</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('messages')">消息管理</a></li>
+    </ul>
+
+    <div class="tab-content mt-3">
+        <!-- 待审核用户 -->
+        <div id="tabPending" class="tab-pane">
+            <table class="table table-striped" id="pendingTable">
+                <thead><tr><th>ID</th><th>用户名</th><th>昵称</th><th>注册时间</th><th>操作</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- 所有用户 -->
+        <div id="tabAllUsers" class="tab-pane" style="display:none;">
+            <table class="table table-striped" id="allUsersTable">
+                <thead><tr><th>ID</th><th>用户名</th><th>昵称</th><th>角色</th><th>状态</th><th>注册时间</th><th>操作</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- 消息管理 -->
+        <div id="tabMessages" class="tab-pane" style="display:none;">
+            <div class="row mb-3">
+                <div class="col-md-4"><input class="form-control" id="msgKeyword" placeholder="关键词搜索"></div>
+                <div class="col-md-3"><input class="form-control" type="date" id="msgFrom"></div>
+                <div class="col-md-3"><input class="form-control" type="date" id="msgTo"></div>
+                <div class="col-md-2"><button class="btn btn-primary w-100" onclick="searchMessages()">搜索</button></div>
+            </div>
+            <table class="table table-striped" id="msgTable">
+                <thead><tr><th>ID</th><th>发送者</th><th>接收者</th><th>内容</th><th>时间</th><th>操作</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+var token = document.cookie.split('; ').find(r => r.startsWith('AuthToken='));
+if (!token) location.href = '/account/login';
+token = token.split('=')[1];
+
+function h() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
+
+function showTab(name) {
+    ['pending','allUsers','messages'].forEach(t => document.getElementById('tab' + t.charAt(0).toUpperCase()+t.slice(1)).style.display = (t===name?'block':'none'));
+    if (name === 'pending') loadPending();
+    else if (name === 'allUsers') loadAllUsers();
+}
+
+// 加载待审核用户
+function loadPending() {
+    fetch('/api/admin/users/pending', { headers: h() }).then(r => r.json()).then(d => {
+        var html = '';
+        if (d.success && d.data) {
+            d.data.forEach(u => {
+                html += '<tr><td>' + u.id + '</td><td>' + u.username + '</td><td>' + u.nickname + '</td><td>' + new Date(u.createdAt).toLocaleString() + '</td>';
+                html += '<td><button class="btn btn-sm btn-success me-1" onclick="approveUser(' + u.id + ')">通过</button></td></tr>';
+            });
+        }
+        document.querySelector('#pendingTable tbody').innerHTML = html || '<tr><td colspan="5" class="text-muted">暂无待审核用户</td></tr>';
+    });
+}
+
+function approveUser(id) {
+    fetch('/api/admin/users/' + id + '/approve', { method: 'POST', headers: h() }).then(r => r.json()).then(d => {
+        alert(d.message);
+        loadPending();
+    });
+}
+
+// 加载所有用户
+function loadAllUsers() {
+    fetch('/api/admin/users?page=1&pageSize=50', { headers: h() }).then(r => r.json()).then(d => {
+        var html = '';
+        if (d.success && d.data) {
+            d.data.items.forEach(u => {
+                var statusText = ['待审核','正常','已封禁'][u.status];
+                var roleText = u.role === 1 ? '管理员' : '用户';
+                html += '<tr><td>' + u.id + '</td><td>' + u.username + '</td><td>' + u.nickname + '</td><td>' + roleText + '</td><td>' + statusText + '</td><td>' + new Date(u.createdAt).toLocaleString() + '</td>';
+                html += '<td>';
+                if (u.role !== 1) {
+                    if (u.status === 2) html += '<button class="btn btn-sm btn-warning me-1" onclick="unbanUser(' + u.id + ')">解禁</button>';
+                    else html += '<button class="btn btn-sm btn-danger me-1" onclick="banUser(' + u.id + ')">封禁</button>';
+                }
+                html += '</td></tr>';
+            });
+        }
+        document.querySelector('#allUsersTable tbody').innerHTML = html || '<tr><td colspan="7" class="text-muted">无数据</td></tr>';
+    });
+}
+
+function banUser(id) {
+    if (!confirm('确定封禁该用户？')) return;
+    fetch('/api/admin/users/' + id + '/ban', { method: 'POST', headers: h() }).then(r => r.json()).then(d => {
+        alert(d.message); loadAllUsers();
+    });
+}
+
+function unbanUser(id) {
+    fetch('/api/admin/users/' + id + '/unban', { method: 'POST', headers: h() }).then(r => r.json()).then(d => {
+        alert(d.message); loadAllUsers();
+    });
+}
+
+// 消息管理
+function searchMessages() {
+    var params = new URLSearchParams();
+    var kw = document.getElementById('msgKeyword').value.trim();
+    if (kw) params.append('keyword', kw);
+    var from = document.getElementById('msgFrom').value;
+    if (from) params.append('from', from);
+    var to = document.getElementById('msgTo').value;
+    if (to) params.append('to', to);
+    params.append('page', 1); params.append('pageSize', 50);
+
+    fetch('/api/admin/messages?' + params.toString(), { headers: h() }).then(r => r.json()).then(d => {
+        var html = '';
+        if (d.success && d.data) {
+            d.data.items.forEach(m => {
+                html += '<tr><td>' + m.id + '</td><td>' + m.senderName + '</td><td>用户' + m.receiverId + '</td><td>' + m.content.substring(0, 50) + '</td><td>' + new Date(m.sentAt).toLocaleString() + '</td>';
+                html += '<td><button class="btn btn-sm btn-danger" onclick="deleteMsg(' + m.id + ')">删除</button></td></tr>';
+            });
+        }
+        document.querySelector('#msgTable tbody').innerHTML = html || '<tr><td colspan="6" class="text-muted">暂无消息</td></tr>';
+    });
+}
+
+function deleteMsg(id) {
+    if (!confirm('确定强制删除该消息？')) return;
+    fetch('/api/admin/messages/' + id, { method: 'DELETE', headers: h() }).then(r => r.json()).then(d => {
+        alert(d.message); searchMessages();
+    });
+}
+
+// 初始加载
+loadPending();
+</script>
+}

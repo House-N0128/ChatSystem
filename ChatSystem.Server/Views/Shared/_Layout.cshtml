@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - 网上沟通交流系统</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">💬 ChatSystem</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto" id="navLinks">
+                        <li class="nav-item" id="navChat" style="display:none;">
+                            <a class="nav-link" href="/chat">聊天</a>
+                        </li>
+                        <li class="nav-item" id="navFriends" style="display:none;">
+                            <a class="nav-link" href="/chat/friends">好友</a>
+                        </li>
+                        <li class="nav-item" id="navHistory" style="display:none;">
+                            <a class="nav-link" href="/chat/history">历史</a>
+                        </li>
+                        <li class="nav-item" id="navAdmin" style="display:none;">
+                            <a class="nav-link" href="/admin">管理</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav" id="authNav">
+                        <li class="nav-item" id="navLogin">
+                            <a class="nav-link" href="/account/login">登录</a>
+                        </li>
+                        <li class="nav-item" id="navRegister">
+                            <a class="nav-link" href="/account/register">注册</a>
+                        </li>
+                        <li class="nav-item" id="navUser" style="display:none;">
+                            <span class="navbar-text text-white me-2" id="navUserName"></span>
+                        </li>
+                        <li class="nav-item" id="navLogout" style="display:none;">
+                            <a class="nav-link" href="/account/logout">退出</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container-fluid">
+        <main role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 根据登录状态动态显示导航
+        (function () {
+            var token = document.cookie.split('; ').find(r => r.startsWith('AuthToken='));
+            if (token) {
+                var tokenValue = token.split('=')[1];
+                try {
+                    var payload = JSON.parse(atob(tokenValue.split('.')[1]));
+                    document.getElementById('navUserName').textContent = payload.nickname || payload.unique_name;
+                    document.getElementById('navLogin').style.display = 'none';
+                    document.getElementById('navRegister').style.display = 'none';
+                    document.getElementById('navUser').style.display = 'block';
+                    document.getElementById('navLogout').style.display = 'block';
+                    document.getElementById('navChat').style.display = 'block';
+                    document.getElementById('navFriends').style.display = 'block';
+                    document.getElementById('navHistory').style.display = 'block';
+                    if (parseInt(payload.role) === 1) {
+                        document.getElementById('navAdmin').style.display = 'block';
+                    }
+                } catch (e) { }
+            }
+        })();
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

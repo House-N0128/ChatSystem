@@ -1,0 +1,85 @@
+@{
+    ViewData["Title"] = "注册";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">用户注册</h3>
+                <div class="mb-3">
+                    <label class="form-label">用户名</label>
+                    <input type="text" id="username" class="form-control" placeholder="3-50个字符">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">昵称</label>
+                    <input type="text" id="nickname" class="form-control" placeholder="显示名称">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">密码</label>
+                    <input type="password" id="password" class="form-control" placeholder="至少6位密码">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">确认密码</label>
+                    <input type="password" id="confirmPassword" class="form-control" placeholder="再次输入密码">
+                </div>
+                <div id="regError" class="text-danger mb-2" style="display:none;"></div>
+                <div id="regSuccess" class="text-success mb-2" style="display:none;"></div>
+                <button class="btn btn-primary w-100" onclick="register()">注册</button>
+                <p class="text-center mt-3 mb-0">
+                    已有账号？<a href="/account/login">立即登录</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function register() {
+    var username = document.getElementById('username').value.trim();
+    var nickname = document.getElementById('nickname').value.trim();
+    var password = document.getElementById('password').value;
+    var confirm = document.getElementById('confirmPassword').value;
+
+    if (!username || !nickname || !password) {
+        showError('请填写所有字段'); return;
+    }
+    if (password !== confirm) {
+        showError('两次密码不一致'); return;
+    }
+    if (password.length < 6) {
+        showError('密码至少6位'); return;
+    }
+
+    var btn = document.querySelector('button');
+    btn.disabled = true; btn.textContent = '注册中...';
+
+    fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, nickname })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false; btn.textContent = '注册';
+        if (data.success) {
+            document.getElementById('regError').style.display = 'none';
+            var el = document.getElementById('regSuccess');
+            el.textContent = data.message + ' 3秒后跳转登录页...';
+            el.style.display = 'block';
+            setTimeout(() => location.href = '/account/login', 3000);
+        } else {
+            showError(data.message);
+        }
+    })
+    .catch(e => { btn.disabled = false; btn.textContent = '注册'; showError('网络错误'); });
+}
+
+function showError(msg) {
+    var el = document.getElementById('regError');
+    el.textContent = msg; el.style.display = 'block';
+    document.getElementById('regSuccess').style.display = 'none';
+}
+</script>
+}
