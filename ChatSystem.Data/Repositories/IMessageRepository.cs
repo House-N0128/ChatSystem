@@ -13,5 +13,8 @@ public interface IMessageRepository
     Task ForceDeleteMessageAsync(long messageId);
     Task<List<PrivateMessage>> SearchAllMessagesAsync(string? keyword, DateTime? from, DateTime? to, int page, int pageSize);
     Task<int> SearchAllMessagesCountAsync(string? keyword, DateTime? from, DateTime? to);
+    Task<List<PrivateMessage>> SearchMyMessagesAsync(int userId, string? keyword, DateTime? from, DateTime? to, int page, int pageSize);
+    Task<int> SearchMyMessagesCountAsync(int userId, string? keyword, DateTime? from, DateTime? to);
+    Task<List<GroupMessage>> SearchMyGroupMessagesAsync(int userId, string? keyword, DateTime? from, DateTime? to, int page, int pageSize);
     Task SaveChangesAsync();
 }

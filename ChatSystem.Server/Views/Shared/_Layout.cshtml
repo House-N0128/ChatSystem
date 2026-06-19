@@ -60,11 +60,16 @@
     <script>
         // 根据登录状态动态显示导航
         (function () {
-            var token = document.cookie.split('; ').find(r => r.startsWith('AuthToken='));
-            if (token) {
-                var tokenValue = token.split('=')[1];
+            var tokenCookie = document.cookie.split('; ').find(function(r) { return r.startsWith('AuthToken='); });
+            if (tokenCookie) {
+                var tokenValue = tokenCookie.split('=').slice(1).join('=');
                 try {
-                    var payload = JSON.parse(atob(tokenValue.split('.')[1]));
+                    // JWT payload 是 Base64URL 编码的 UTF-8 JSON，atob 只支持 ASCII
+                    var base64 = tokenValue.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                    var binary = atob(base64);
+                    var bytes = new Uint8Array(binary.length);
+                    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    var payload = JSON.parse(new TextDecoder('utf-8').decode(bytes));
                     document.getElementById('navUserName').textContent = payload.nickname || payload.unique_name;
                     document.getElementById('navLogin').style.display = 'none';
                     document.getElementById('navRegister').style.display = 'none';

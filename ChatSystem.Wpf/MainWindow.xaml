@@ -192,8 +192,13 @@
                                                 <Ellipse Grid.Column="0" Width="10" Height="10" Margin="0,0,10,0"
                                                          Fill="{Binding IsOnline, Converter={StaticResource OnlineColor}}"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding FriendNickname}" FontSize="14" Foreground="#343A40"/>
-                                                <TextBlock Grid.Column="2" Text="●" Foreground="#FA5252" FontSize="10"
-                                                           Visibility="{Binding HasUnread, Converter={StaticResource BoolToVis}}"/>
+                                                <Border Grid.Column="2" Background="#FA5252" CornerRadius="9"
+                                                        MinWidth="18" Height="18" Padding="4,0"
+                                                        Visibility="{Binding HasUnread, Converter={StaticResource BoolToVis}}"
+                                                        HorizontalAlignment="Right">
+                                                    <TextBlock Text="{Binding UnreadCount}" Foreground="White" FontSize="10"
+                                                               FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -287,18 +292,25 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Button Grid.Column="0" Content="📎" FontSize="16" Width="36" Height="36"
-                                        Padding="0" Margin="0,0,8,0"
+                                        Padding="0" Margin="0,0,4,0"
                                         Background="#F1F3F5" BorderThickness="1" BorderBrush="#DEE2E6"
                                         IsEnabled="{Binding SelectedFriend, Converter={StaticResource BoolToVis}}"
                                         Command="{Binding UploadFileCommand}"/>
-                                <TextBox Grid.Column="1" Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
+                                <Button Grid.Column="1" Content="😊" FontSize="16" Width="36" Height="36"
+                                        Padding="0" Margin="0,0,8,0"
+                                        Background="#F1F3F5" BorderThickness="1" BorderBrush="#DEE2E6"
+                                        IsEnabled="{Binding SelectedFriend, Converter={StaticResource BoolToVis}}"
+                                        Click="EmojiButton_Click"/>
+                                <TextBox Grid.Column="2" Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
                                          Padding="10,8" BorderBrush="#DEE2E6" BorderThickness="1"
-                                         IsEnabled="{Binding SelectedFriend, Converter={StaticResource BoolToVis}}"/>
-                                <Button Grid.Column="2" Content="发送" Margin="8,0,0,0" Padding="14,8"
+                                         IsEnabled="{Binding SelectedFriend, Converter={StaticResource BoolToVis}}"
+                                         PreviewKeyDown="MessageBox_KeyDown" x:Name="PrivateChatTextBox"/>
+                                <Button Grid.Column="3" Content="发送" Margin="8,0,0,0" Padding="14,8"
                                         Style="{StaticResource PrimaryBtn}"
                                         Command="{Binding SendMessageCommand}"/>
                             </Grid>
@@ -448,9 +460,20 @@
                                      SelectionChanged="GroupList_SelectionChanged">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Padding="12,10" Margin="4,2" CornerRadius="8" Background="Transparent">
-                                            <TextBlock Text="{Binding DisplayText}" FontSize="14" Foreground="#343A40"/>
-                                        </Border>
+                                        <Grid Margin="4,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding DisplayText}" FontSize="14" Foreground="#343A40" VerticalAlignment="Center" Margin="12,10,0,10"/>
+                                            <Border Grid.Column="1" Background="#FA5252" CornerRadius="9"
+                                                    MinWidth="18" Height="18" Padding="4,0" Margin="0,0,8,0"
+                                                    Visibility="{Binding HasUnread, Converter={StaticResource BoolToVis}}"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding UnreadCount}" Foreground="White" FontSize="10"
+                                                           FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
@@ -488,8 +511,13 @@
                                     <Button Content="解散" FontSize="11" Padding="10,5" Margin="0,0,8,0"
                                             Foreground="#FA5252" Background="#FFF5F5"
                                             BorderThickness="1" BorderBrush="#FFC9C9" Cursor="Hand"
-                                            Visibility="{Binding HasSelectedGroup, Converter={StaticResource BoolToVis}}"
+                                            Visibility="{Binding IsGroupCreator, Converter={StaticResource BoolToVis}}"
                                             Command="{Binding DissolveGroupCommand}"/>
+                                    <Button Content="退出" FontSize="11" Padding="10,5" Margin="0,0,8,0"
+                                            Foreground="#868E96" Background="#F8F9FA"
+                                            BorderThickness="1" BorderBrush="#DEE2E6" Cursor="Hand"
+                                            Visibility="{Binding IsNotGroupCreator, Converter={StaticResource BoolToVis}}"
+                                            Command="{Binding LeaveGroupCommand}"/>
                                     <Button Content="＋ 邀请成员" FontSize="12" Padding="12,6"
                                             Style="{StaticResource PrimaryBtn}"
                                             Visibility="{Binding HasSelectedGroup, Converter={StaticResource BoolToVis}}"
@@ -566,18 +594,25 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Button Grid.Column="0" Content="📎" FontSize="16" Width="36" Height="36"
-                                        Padding="0" Margin="0,0,8,0"
+                                        Padding="0" Margin="0,0,4,0"
                                         Background="#F1F3F5" BorderThickness="1" BorderBrush="#DEE2E6"
                                         IsEnabled="{Binding SelectedGroup, Converter={StaticResource BoolToVis}}"
                                         Command="{Binding UploadGroupFileCommand}"/>
-                                <TextBox Grid.Column="1" Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
+                                <Button Grid.Column="1" Content="😊" FontSize="16" Width="36" Height="36"
+                                        Padding="0" Margin="0,0,8,0"
+                                        Background="#F1F3F5" BorderThickness="1" BorderBrush="#DEE2E6"
+                                        IsEnabled="{Binding SelectedGroup, Converter={StaticResource BoolToVis}}"
+                                        Click="EmojiButton_Click"/>
+                                <TextBox Grid.Column="2" Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
                                          Padding="10,8" BorderBrush="#DEE2E6" BorderThickness="1"
-                                         IsEnabled="{Binding SelectedGroup, Converter={StaticResource BoolToVis}}"/>
-                                <Button Grid.Column="2" Content="发送" Margin="8,0,0,0"
+                                         IsEnabled="{Binding SelectedGroup, Converter={StaticResource BoolToVis}}"
+                                         PreviewKeyDown="MessageBox_KeyDown" x:Name="GroupChatTextBox"/>
+                                <Button Grid.Column="3" Content="发送" Margin="8,0,0,0"
                                         Style="{StaticResource PrimaryBtn}"
                                         Command="{Binding SendMessageCommand}"/>
                             </Grid>
@@ -598,10 +633,16 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBox Text="{Binding HistorySearchKeyword, UpdateSourceTrigger=PropertyChanged}"
                                  Padding="10,8" Margin="0,0,8,0"/>
-                        <Button Grid.Column="1" Content="🔍 搜索" Style="{StaticResource PrimaryBtn}"
+                        <DatePicker Grid.Column="1" SelectedDate="{Binding HistoryFrom}" Width="130" Margin="0,0,4,0"
+                                    FontSize="12" />
+                        <DatePicker Grid.Column="2" SelectedDate="{Binding HistoryTo}" Width="130" Margin="0,0,8,0"
+                                    FontSize="12" />
+                        <Button Grid.Column="3" Content="🔍 搜索" Style="{StaticResource PrimaryBtn}"
                                 Command="{Binding LoadHistoryCommand}"/>
                     </Grid>
 

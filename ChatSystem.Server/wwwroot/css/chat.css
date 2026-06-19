@@ -1,0 +1,129 @@
+/* ===== ChatSystem Web 样式 —— 对齐 WPF 桌面端设计 ===== */
+
+/* 聊天容器 */
+.chat-wrapper { display: flex; height: calc(100vh - 130px); margin-top: 12px; gap: 0; }
+
+/* 左侧联系列表 */
+.chat-sidebar { width: 260px; min-width: 260px; border-right: 1px solid #dee2e6; overflow-y: auto; padding: 12px 10px; background: #fff; }
+.chat-sidebar h6 { font-weight: 600; color: #495057; margin-bottom: 10px; }
+
+/* 联系人列表项 */
+.contact-item { padding: 10px 12px; cursor: pointer; border-radius: 8px; margin-bottom: 3px; display: flex; align-items: center; transition: background .15s; }
+.contact-item:hover { background: #e9ecef; }
+.contact-item.active { background: #0d6efd; color: #fff; }
+.contact-item .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
+.contact-item .dot.online { background: #28a745; }
+.contact-item .dot.offline { background: #adb5bd; }
+.unread-badge { margin-left: auto; background: #FA5252; color: #fff; font-size: 10px; font-weight: bold; min-width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 9px; padding: 0 5px; }
+.contact-item.active .unread-badge { background: #fff; color: #0d6efd; }
+
+/* 右侧聊天区 */
+.chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+/* 聊天标题栏 */
+.chat-header { padding: 12px 16px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; display: flex; align-items: center; justify-content: space-between; }
+.chat-header .title { font-weight: 600; font-size: 15px; color: #343A40; }
+.chat-header .btns { display: flex; gap: 6px; }
+.chat-header .btns button { font-size: 12px; padding: 5px 12px; border-radius: 6px; }
+
+/* 消息区 */
+.chat-messages { flex: 1; overflow-y: auto; padding: 16px 20px; background: #f4f6f8; display: flex; flex-direction: column; }
+
+/* ===== 消息气泡 —— 对齐桌面端 ===== */
+.msg-bubble {
+    display: inline-block;
+    max-width: 300px;
+    margin-bottom: 12px;
+    padding: 10px 8px;
+    border-radius: 10px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+/* 自己的消息：绿色底、白色字、靠右 */
+.msg-bubble.mine {
+    background: #28a745;
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+/* 别人的消息：白底、黑字、靠左、带阴影 */
+.msg-bubble.other {
+    background: #fff;
+    color: #212529;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+/* 发送者名字：只有别人消息才显示，11px */
+.msg-bubble .sender {
+    font-size: 11px;
+    margin-bottom: 2px;
+    opacity: 0.85;
+}
+/* 消息正文：14px，自动换行 */
+.msg-bubble .content {
+    font-size: 14px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+/* 时间：10px，右对齐，距正文 4px */
+.msg-bubble .time {
+    font-size: 10px;
+    text-align: right;
+    margin-top: 4px;
+    opacity: 0.7;
+}
+/* 删除按钮 */
+.msg-bubble .del-btn {
+    font-size: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 4px;
+    opacity: 0.5;
+}
+.msg-bubble.mine .del-btn { color: rgba(255,255,255,0.8); }
+.msg-bubble.mine .del-btn:hover { opacity: 1; color: #fff; }
+.msg-bubble.other .del-btn { color: #999; }
+.msg-bubble.other .del-btn:hover { opacity: 1; color: #dc3545; }
+
+/* 输入区域 */
+.chat-input { display: flex; padding: 12px 14px; border-top: 1px solid #dee2e6; background: #fff; align-items: center; gap: 8px; position: relative; }
+.chat-input .msg-text { flex: 1; padding: 10px 14px; border: 1px solid #ced4da; border-radius: 8px; font-size: 14px; outline: none; transition: border-color .2s; }
+.chat-input .msg-text:focus { border-color: #0d6efd; }
+.chat-input .icon-btn { width: 38px; height: 38px; padding: 0; background: #f1f3f5; border: 1px solid #dee2e6; border-radius: 8px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.chat-input .icon-btn:hover { background: #e9ecef; }
+.chat-input .send-btn { padding: 10px 22px; border-radius: 8px; font-weight: 500; }
+#typingHint { padding: 4px 16px; font-size: .8rem; color: #6c757d; font-style: italic; display: none; }
+
+/* Emoji 面板 */
+.emoji-popup { position: absolute; bottom: 58px; left: 50px; background: #fff; border: 1px solid #dee2e6; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.12); z-index: 1000; padding: 10px; display: none; }
+.emoji-tabs { display: flex; gap: 2px; margin-bottom: 8px; flex-wrap: wrap; }
+.emoji-tab { padding: 4px 12px; border: none; background: transparent; cursor: pointer; border-radius: 6px; font-size: 12px; color: #6c757d; }
+.emoji-tab.active { background: #e9ecef; color: #212529; font-weight: 600; }
+.emoji-grid { display: grid; grid-template-columns: repeat(8, 38px); gap: 2px; }
+.emoji-item { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 21px; cursor: pointer; border: none; background: transparent; border-radius: 6px; transition: background .1s; }
+.emoji-item:hover { background: #e9ecef; transform: scale(1.2); }
+
+/* 好友管理页 */
+.friends-page { max-width: 800px; margin: 20px auto; }
+.friends-page .card { border: 1px solid #dee2e6; border-radius: 12px; padding: 20px; margin-bottom: 20px; background: #fff; }
+.friends-page .search-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+.friends-page .search-bar input { flex: 1; padding: 10px 14px; border: 1px solid #ced4da; border-radius: 8px; }
+.friends-page .result-item, .friends-page .friend-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 8px; margin-bottom: 4px; background: #f8f9fa; }
+.friends-page .result-item:hover { background: #e9ecef; }
+.friends-page .friend-row .info { display: flex; align-items: center; gap: 8px; }
+
+/* 历史记录页 */
+.history-page { max-width: 900px; margin: 20px auto; }
+.history-page .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.history-page .filter-bar input { padding: 10px 14px; border: 1px solid #ced4da; border-radius: 8px; }
+.history-page .msg-row { padding: 12px 16px; border-radius: 8px; background: #fff; margin-bottom: 6px; border: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: flex-start; }
+.history-page .msg-row .meta { font-size: .8rem; color: #6c757d; margin-top: 2px; }
+
+/* 导航标签 */
+.nav-tabs .nav-link { cursor: pointer; }
+
+/* 创群输入 */
+.create-group-row { display: flex; gap: 6px; margin-top: 12px; }
+.create-group-row input { flex: 1; padding: 8px 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 13px; }

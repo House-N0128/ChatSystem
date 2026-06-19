@@ -16,11 +16,13 @@ namespace ChatSystem.Server.Controllers.Api;
 public class GroupsController : ControllerBase
 {
     private readonly IGroupRepository _groupRepo;
+    private readonly IUserRepository _userRepo;
     private readonly IHubContext<ChatHub> _hubContext;
 
-    public GroupsController(IGroupRepository groupRepo, IHubContext<ChatHub> hubContext)
+    public GroupsController(IGroupRepository groupRepo, IUserRepository userRepo, IHubContext<ChatHub> hubContext)
     {
         _groupRepo = groupRepo;
+        _userRepo = userRepo;
         _hubContext = hubContext;
     }
 
@@ -95,7 +97,14 @@ public class GroupsController : ControllerBase
     [HttpPost("{id}/members")]
     public async Task<IActionResult> AddMember(int id, [FromBody] int userId)
     {
+        var (adderId, adderName, adderNickname, _) = JwtHelper.ParseToken(User);
         await _groupRepo.AddMemberAsync(id, userId);
+
+        // 广播通知群内所有成员
+        var addedUser = await _userRepo.GetByIdAsync(userId);
+        await _hubContext.Clients.Group($"group:{id}").SendAsync("GroupMemberAdded",
+            id, userId, addedUser?.Username ?? "", addedUser?.Nickname ?? "");
+
         return Ok(ApiResponse.Ok("成员已添加"));
     }
 
@@ -103,6 +112,10 @@ public class GroupsController : ControllerBase
     public async Task<IActionResult> RemoveMember(int id, int userId)
     {
         await _groupRepo.RemoveMemberAsync(id, userId);
+
+        // 广播通知群内所有成员
+        await _hubContext.Clients.Group($"group:{id}").SendAsync("GroupMemberRemoved", id, userId);
+
         return Ok(ApiResponse.Ok("成员已移除"));
     }
 
@@ -130,7 +143,13 @@ public class GroupsController : ControllerBase
     {
         var (userId, _, _, _) = JwtHelper.ParseToken(User);
         var deleted = await _groupRepo.DeleteGroupAsync(id, userId);
-        return deleted ? Ok(ApiResponse.Ok("群聊已解散")) : Ok(ApiResponse.Fail("只有群主才能解散群聊"));
+        if (deleted)
+        {
+            // 广播通知群内所有成员群已被解散
+            await _hubContext.Clients.Group($"group:{id}").SendAsync("GroupDissolved", id);
+            return Ok(ApiResponse.Ok("群聊已解散"));
+        }
+        return Ok(ApiResponse.Fail("只有群主才能解散群聊"));
     }
 
     [HttpDelete("{groupId}/messages/{messageId}")]

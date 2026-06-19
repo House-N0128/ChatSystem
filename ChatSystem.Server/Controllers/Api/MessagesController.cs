@@ -61,6 +61,96 @@ public class MessagesController : ControllerBase
         return Ok(ApiResponse<PagedResult<MessageDTO>>.Ok(paged));
     }
 
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery] string? keyword = null,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        var (userId, _, _, _) = JwtHelper.ParseToken(User);
+        var messages = await _msgRepo.SearchMyMessagesAsync(userId, keyword, from, to, page, pageSize);
+        var total = await _msgRepo.SearchMyMessagesCountAsync(userId, keyword, from, to);
+
+        var dtos = messages.Select(m => new MessageDTO
+        {
+            Id = m.Id,
+            SenderId = m.SenderId,
+            SenderName = m.Sender?.Username ?? "",
+            SenderNickname = m.Sender?.Nickname ?? "",
+            ReceiverId = m.ReceiverId,
+            ReceiverName = m.Receiver?.Username ?? "",
+            ReceiverNickname = m.Receiver?.Nickname ?? "",
+            Content = m.Content,
+            MessageType = m.MessageType,
+            SentAt = m.SentAt
+        }).ToList();
+
+        return Ok(ApiResponse<PagedResult<MessageDTO>>.Ok(new PagedResult<MessageDTO>
+        {
+            TotalCount = total,
+            Page = page,
+            PageSize = pageSize,
+            Items = dtos
+        }));
+    }
+
+    [HttpGet("history")]
+    public async Task<IActionResult> History(
+        [FromQuery] string? keyword = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 30)
+    {
+        var (userId, _, _, _) = JwtHelper.ParseToken(User);
+
+        // 搜索私聊消息
+        var privateMsgs = await _msgRepo.SearchMyMessagesAsync(userId, keyword, null, null, 1, 500);
+        // 搜索群聊消息
+        var groupMsgs = await _msgRepo.SearchMyGroupMessagesAsync(userId, keyword, null, null, 1, 500);
+
+        var results = new List<HistoryMessageDTO>();
+
+        foreach (var m in privateMsgs)
+        {
+            var isMine = m.SenderId == userId;
+            var partner = isMine ? m.Receiver : m.Sender;
+            results.Add(new HistoryMessageDTO
+            {
+                Id = m.Id, SenderId = m.SenderId,
+                SenderName = m.Sender?.Username ?? "",
+                SenderNickname = m.Sender?.Nickname ?? "",
+                Content = m.Content, MessageType = m.MessageType,
+                SentAt = m.SentAt, ChatType = "private",
+                PartnerName = partner?.Username ?? "",
+                PartnerNickname = partner?.Nickname ?? ""
+            });
+        }
+
+        foreach (var m in groupMsgs)
+        {
+            results.Add(new HistoryMessageDTO
+            {
+                Id = m.Id, SenderId = m.SenderId,
+                SenderName = m.Sender?.Username ?? "",
+                SenderNickname = m.Sender?.Nickname ?? "",
+                Content = m.Content, MessageType = m.MessageType,
+                SentAt = m.SentAt, ChatType = "group",
+                GroupId = m.GroupId,
+                GroupName = m.Group?.Name ?? ""
+            });
+        }
+
+        // 合并排序 + 分页
+        var sorted = results.OrderByDescending(r => r.SentAt)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        return Ok(ApiResponse<PagedResult<HistoryMessageDTO>>.Ok(new PagedResult<HistoryMessageDTO>
+        {
+            TotalCount = results.Count, Page = page, PageSize = pageSize, Items = sorted
+        }));
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteMessage(long id)
     {

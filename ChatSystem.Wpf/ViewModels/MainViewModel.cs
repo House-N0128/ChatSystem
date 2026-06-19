@@ -41,6 +41,11 @@ public class MainViewModel : BaseViewModel
         _signalR.FriendRequestReceived += r => { _ = LoadPendingRequestsAsync(); };
         _signalR.UserOnline += OnUserOnline;
         _signalR.UserOffline += OnUserOffline;
+        _signalR.GroupDissolved += OnGroupDissolved;
+        _signalR.GroupMemberAdded += OnGroupMemberAdded;
+        _signalR.GroupMemberRemoved += OnGroupMemberRemoved;
+        _signalR.UserBanned += OnUserBanned;
+        _signalR.MessageDeleted += OnMessageDeleted;
 
         CurrentPage = "chat";
     }
@@ -122,7 +127,7 @@ public class MainViewModel : BaseViewModel
             if (SetField(ref _selectedFriend, value) && value != null)
             {
                 MessageText = "";
-                value.HasUnread = false;
+                value.UnreadCount = 0;
                 SelectedGroup = null;
                 GroupMessages.Clear();
                 _ = LoadChatHistoryAsync(value.FriendUserId);
@@ -167,6 +172,11 @@ public class MainViewModel : BaseViewModel
     public bool CanSend => !string.IsNullOrWhiteSpace(MessageText) && (SelectedFriend != null || SelectedGroup != null);
 
     public ICommand SendMessageCommand => _sendMessageCommand;
+
+    public void InsertEmoji(string emoji)
+    {
+        MessageText += emoji;
+    }
 
     private string _currentChatPartnerName = "";
     public string CurrentChatPartnerName
@@ -249,6 +259,10 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<GroupItemViewModel> Groups { get; } = new();
 
     public bool HasSelectedGroup => _selectedGroup != null;
+    public bool IsGroupCreator => SelectedGroup != null
+        && SelectedGroup.CreatorId == AuthService.CurrentUser?.Id;
+    public bool IsNotGroupCreator => SelectedGroup != null
+        && SelectedGroup.CreatorId != AuthService.CurrentUser?.Id;
 
     private GroupItemViewModel? _selectedGroup;
     public GroupItemViewModel? SelectedGroup
@@ -258,6 +272,7 @@ public class MainViewModel : BaseViewModel
         {
             if (SetField(ref _selectedGroup, value) && value != null)
             {
+                value.UnreadCount = 0;
                 MessageText = "";
                 SelectedFriend = null;
                 Messages.Clear();
@@ -266,6 +281,8 @@ public class MainViewModel : BaseViewModel
                 _ = _signalR.JoinGroupAsync(value.Id);
             }
             OnPropertyChanged(nameof(HasSelectedGroup));
+            OnPropertyChanged(nameof(IsGroupCreator));
+            OnPropertyChanged(nameof(IsNotGroupCreator));
             _sendMessageCommand?.RaiseCanExecuteChanged();
         }
     }
@@ -501,6 +518,30 @@ public class MainViewModel : BaseViewModel
         }
     });
 
+    // ===== 退出群聊 =====
+    public ICommand LeaveGroupCommand => new RelayCommand(async _ =>
+    {
+        if (SelectedGroup == null) return;
+        var currentUserId = AuthService.CurrentUser?.Id ?? 0;
+        if (currentUserId == 0) return;
+        if (MessageBox.Show($"确定退出群聊「{SelectedGroup.Name}」？",
+                "退出群聊", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+        var result = await _api.RemoveMemberAsync(SelectedGroup.Id, currentUserId);
+        if (result.Success)
+        {
+            await _signalR.LeaveGroupAsync(SelectedGroup.Id);
+            SelectedGroup = null;
+            GroupMessages.Clear();
+            await LoadGroupsAsync();
+            MessageBox.Show("已退出群聊", "提示");
+        }
+        else
+        {
+            MessageBox.Show(result.Message, "失败", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    });
+
     // ===== 好友请求 =====
     public ObservableCollection<FriendRequestDTO> PendingRequests { get; } = new();
 
@@ -562,6 +603,7 @@ public class MainViewModel : BaseViewModel
         {
             var result = await _api.SendFriendRequestAsync(userId);
             MessageBox.Show(result.Message);
+            if (result.Success) await LoadFriendsAsync();
         }
     });
 
@@ -579,7 +621,34 @@ public class MainViewModel : BaseViewModel
     public ObservableCollection<HistoryMessageViewModel> HistoryMessages { get; } = new();
 
     private string _historySearchKeyword = "";
-    public string HistorySearchKeyword { get => _historySearchKeyword; set => SetField(ref _historySearchKeyword, value); }
+    private CancellationTokenSource? _historyCts;
+
+    public string HistorySearchKeyword
+    {
+        get => _historySearchKeyword;
+        set
+        {
+            if (SetField(ref _historySearchKeyword, value))
+                DebounceHistorySearch();
+        }
+    }
+
+    private DateTime? _historyFrom;
+    public DateTime? HistoryFrom { get => _historyFrom; set { if (SetField(ref _historyFrom, value)) DebounceHistorySearch(); } }
+
+    private DateTime? _historyTo;
+    public DateTime? HistoryTo { get => _historyTo; set { if (SetField(ref _historyTo, value)) DebounceHistorySearch(); } }
+
+    private async void DebounceHistorySearch()
+    {
+        _historyCts?.Cancel();
+        _historyCts = new CancellationTokenSource();
+        var token = _historyCts.Token;
+        try { await Task.Delay(350, token); }
+        catch (TaskCanceledException) { return; }
+        if (!token.IsCancellationRequested)
+            await LoadHistoryAsync();
+    }
 
     public ICommand LoadHistoryCommand => new RelayCommand(async _ => await LoadHistoryAsync());
 
@@ -589,22 +658,26 @@ public class MainViewModel : BaseViewModel
         {
             Application.Current.Dispatcher.Invoke(() => HistoryMessages.Clear());
             var keyword = HistorySearchKeyword;
+            var from = HistoryFrom;
+            var to = HistoryTo;
 
             var friendsResult = await _api.GetFriendsAsync();
             if (friendsResult.Success && friendsResult.Data != null)
             {
                 foreach (var friend in friendsResult.Data)
                 {
-                    var msgResult = await _api.GetMessagesAsync(friend.FriendUserId, 1, 20);
+                    var msgResult = await _api.GetMessagesAsync(friend.FriendUserId, 1, 50);
                     if (msgResult.Success && msgResult.Data != null)
                     {
                         var filtered = msgResult.Data.Items
-                            .Where(m => string.IsNullOrEmpty(keyword) ||
+                            .Where(m => (string.IsNullOrEmpty(keyword) ||
                                         m.Content.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-                            .Select(m => new HistoryMessageViewModel(m, friend.FriendNickname, AuthService.CurrentUser?.Id ?? 0));
+                                        && (!from.HasValue || m.SentAt >= from.Value)
+                                        && (!to.HasValue || m.SentAt <= to.Value.Date.AddDays(1)));
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            foreach (var m in filtered) HistoryMessages.Add(m);
+                            foreach (var m in filtered.Select(m => new HistoryMessageViewModel(m, friend.FriendNickname, AuthService.CurrentUser?.Id ?? 0)))
+                                HistoryMessages.Add(m);
                         });
                     }
                 }
@@ -615,16 +688,18 @@ public class MainViewModel : BaseViewModel
             {
                 foreach (var group in groupsResult.Data)
                 {
-                    var msgResult = await _api.GetGroupMessagesAsync(group.Id, 1, 20);
+                    var msgResult = await _api.GetGroupMessagesAsync(group.Id, 1, 50);
                     if (msgResult.Success && msgResult.Data != null)
                     {
                         var filtered = msgResult.Data
-                            .Where(m => string.IsNullOrEmpty(keyword) ||
+                            .Where(m => (string.IsNullOrEmpty(keyword) ||
                                         m.Content.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-                            .Select(m => new HistoryMessageViewModel(m, group.Name, AuthService.CurrentUser?.Id ?? 0));
+                                        && (!from.HasValue || m.SentAt >= from.Value)
+                                        && (!to.HasValue || m.SentAt <= to.Value.Date.AddDays(1)));
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            foreach (var m in filtered) HistoryMessages.Add(m);
+                            foreach (var m in filtered.Select(m => new HistoryMessageViewModel(m, group.Name, AuthService.CurrentUser?.Id ?? 0)))
+                                HistoryMessages.Add(m);
                         });
                     }
                 }
@@ -875,7 +950,7 @@ public class MainViewModel : BaseViewModel
             else
             {
                 var friend = Friends.FirstOrDefault(f => f.FriendUserId == friendId);
-                if (friend != null) friend.HasUnread = true;
+                if (friend != null) friend.UnreadCount++;
             }
         });
     }
@@ -888,6 +963,11 @@ public class MainViewModel : BaseViewModel
             {
                 GroupMessages.Add(new GroupMessageViewModel(msg, AuthService.CurrentUser?.Id ?? 0));
                 ScrollToBottom?.Invoke();
+            }
+            else
+            {
+                var group = Groups.FirstOrDefault(g => g.Id == msg.GroupId);
+                if (group != null) group.UnreadCount++;
             }
         });
     }
@@ -918,6 +998,75 @@ public class MainViewModel : BaseViewModel
         if (item != null) item.IsOnline = false;
     }
 
+    private void OnGroupDissolved(int groupId)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            var g = Groups.FirstOrDefault(x => x.Id == groupId);
+            if (g != null) Groups.Remove(g);
+            if (SelectedGroup?.Id == groupId)
+            {
+                SelectedGroup = null;
+                GroupMessages.Clear();
+            }
+        });
+    }
+
+    private void OnGroupMemberAdded(int groupId, int userId, string username, string nickname)
+    {
+        // 刷新选中群的信息（如果是当前群）
+        if (SelectedGroup?.Id == groupId)
+        {
+            _ = LoadGroupsAsync();
+        }
+    }
+
+    private void OnGroupMemberRemoved(int groupId, int userId)
+    {
+        var currentUserId = AuthService.CurrentUser?.Id ?? 0;
+        // 如果是自己被移除，清除选中群
+        if (userId == currentUserId)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                var g = Groups.FirstOrDefault(x => x.Id == groupId);
+                if (g != null) Groups.Remove(g);
+                if (SelectedGroup?.Id == groupId)
+                {
+                    _ = _signalR.LeaveGroupAsync(groupId);
+                    SelectedGroup = null;
+                    GroupMessages.Clear();
+                }
+            });
+        }
+        else if (SelectedGroup?.Id == groupId)
+        {
+            _ = LoadGroupsAsync();
+        }
+    }
+
+    private void OnUserBanned(string message)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            MessageBox.Show(message, "账号已被封禁", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _ = _signalR.DisconnectAsync();
+            AuthService.Clear();
+            OnLogout?.Invoke();
+        });
+    }
+
+    private void OnMessageDeleted(long messageId)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            var pm = Messages.FirstOrDefault(m => m.Id == messageId);
+            if (pm != null) Messages.Remove(pm);
+            var gm = GroupMessages.FirstOrDefault(m => m.Id == messageId);
+            if (gm != null) GroupMessages.Remove(gm);
+        });
+    }
+
     private void Logout()
     {
         _ = _signalR.DisconnectAsync();
@@ -937,8 +1086,9 @@ public class FriendItemViewModel : BaseViewModel
     private bool _isOnline;
     public bool IsOnline { get => _isOnline; set => SetField(ref _isOnline, value); }
 
-    private bool _hasUnread;
-    public bool HasUnread { get => _hasUnread; set => SetField(ref _hasUnread, value); }
+    private int _unreadCount;
+    public int UnreadCount { get => _unreadCount; set { SetField(ref _unreadCount, value); OnPropertyChanged(nameof(HasUnread)); } }
+    public bool HasUnread => UnreadCount > 0;
 
     public FriendItemViewModel() { }
     public FriendItemViewModel(FriendDTO dto)
@@ -980,13 +1130,18 @@ public class GroupItemViewModel : BaseViewModel
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";
+    public int CreatorId { get; set; }
     public int MemberCount { get; set; }
     public string DisplayText => $"{Name} ({MemberCount}人)";
+
+    private int _unreadCount;
+    public int UnreadCount { get => _unreadCount; set { SetField(ref _unreadCount, value); OnPropertyChanged(nameof(HasUnread)); } }
+    public bool HasUnread => UnreadCount > 0;
 
     public GroupItemViewModel() { }
     public GroupItemViewModel(GroupDTO dto)
     {
-        Id = dto.Id; Name = dto.Name; MemberCount = dto.MemberCount;
+        Id = dto.Id; Name = dto.Name; CreatorId = dto.CreatorId; MemberCount = dto.MemberCount;
     }
 }
 

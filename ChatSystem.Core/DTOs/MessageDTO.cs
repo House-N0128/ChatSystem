@@ -18,3 +18,21 @@ public class MessageDTO
     public string? FilePath { get; set; }
     public DateTime SentAt { get; set; }
 }
+
+public class HistoryMessageDTO
+{
+    public long Id { get; set; }
+    public int SenderId { get; set; }
+    public string SenderName { get; set; } = string.Empty;
+    public string SenderNickname { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public MessageType MessageType { get; set; }
+    public DateTime SentAt { get; set; }
+    public string ChatType { get; set; } = string.Empty;  // "private" | "group"
+    // 私聊
+    public string? PartnerName { get; set; }
+    public string? PartnerNickname { get; set; }
+    // 群聊
+    public int? GroupId { get; set; }
+    public string? GroupName { get; set; }
+}

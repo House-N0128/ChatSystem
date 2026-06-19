@@ -1,0 +1,27 @@
+@{
+    ViewData["Title"] = "聊天记录";
+}
+<link rel="stylesheet" href="~/css/chat.css" />
+
+<div class="history-page">
+    <h4 class="mb-3">📋 聊天记录</h4>
+
+    <div class="card mb-3">
+        <div class="filter-bar">
+            <input type="text" id="histKeyword" placeholder="关键词搜索...">
+            <input type="date" id="histFrom" title="开始日期">
+            <input type="date" id="histTo" title="结束日期">
+            <button class="btn btn-primary" onclick="ChatApp.searchHistory()">搜索</button>
+        </div>
+    </div>
+
+    <div id="histResults">
+        <p class="text-muted">输入关键词或选择日期范围，点击搜索</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/signalr/signalr.min.js"></script>
+    <script src="~/js/chat.js"></script>
+    <script>ChatApp.initHistoryPage();</script>
+}

@@ -1,0 +1,30 @@
+@{
+    ViewData["Title"] = "好友管理";
+}
+<link rel="stylesheet" href="~/css/chat.css" />
+
+<div class="friends-page">
+    <h4 class="mb-3">👥 好友管理</h4>
+
+    <!-- 添加好友 -->
+    <div class="card">
+        <h6 class="mb-3">🔍 搜索用户</h6>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="输入用户名或昵称搜索..." onkeydown="if(event.key==='Enter')ChatApp.searchUsers()">
+            <button class="btn btn-primary" onclick="ChatApp.searchUsers()">搜索</button>
+        </div>
+        <div id="searchResults"></div>
+    </div>
+
+    <!-- 我的好友 -->
+    <div class="card">
+        <h6 class="mb-3">💚 我的好友</h6>
+        <div id="friendList"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/signalr/signalr.min.js"></script>
+    <script src="~/js/chat.js"></script>
+    <script>ChatApp.initFriendsPage();</script>
+}

@@ -152,6 +152,73 @@ public class MessageRepository : IMessageRepository
         return await query.CountAsync();
     }
 
+    public async Task<List<PrivateMessage>> SearchMyMessagesAsync(
+        int userId, string? keyword, DateTime? from, DateTime? to, int page, int pageSize)
+    {
+        var query = _db.PrivateMessages
+            .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .Where(m => !m.IsDeleted && (m.SenderId == userId || m.ReceiverId == userId));
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+            query = query.Where(m => m.Content.Contains(keyword));
+        if (from.HasValue)
+            query = query.Where(m => m.SentAt >= from.Value);
+        if (to.HasValue)
+            query = query.Where(m => m.SentAt <= to.Value);
+
+        return await query
+            .OrderByDescending(m => m.SentAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<int> SearchMyMessagesCountAsync(
+        int userId, string? keyword, DateTime? from, DateTime? to)
+    {
+        var query = _db.PrivateMessages
+            .Where(m => !m.IsDeleted && (m.SenderId == userId || m.ReceiverId == userId));
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+            query = query.Where(m => m.Content.Contains(keyword));
+        if (from.HasValue)
+            query = query.Where(m => m.SentAt >= from.Value);
+        if (to.HasValue)
+            query = query.Where(m => m.SentAt <= to.Value);
+
+        return await query.CountAsync();
+    }
+
+    public async Task<List<GroupMessage>> SearchMyGroupMessagesAsync(
+        int userId, string? keyword, DateTime? from, DateTime? to, int page, int pageSize)
+    {
+        var memberGroupIds = await _db.GroupMembers
+            .Where(gm => gm.UserId == userId)
+            .Select(gm => gm.GroupId)
+            .ToListAsync();
+
+        if (memberGroupIds.Count == 0) return new List<GroupMessage>();
+
+        var query = _db.GroupMessages
+            .Include(m => m.Sender)
+            .Include(m => m.Group)
+            .Where(m => !m.IsDeleted && memberGroupIds.Contains(m.GroupId));
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+            query = query.Where(m => m.Content.Contains(keyword));
+        if (from.HasValue)
+            query = query.Where(m => m.SentAt >= from.Value);
+        if (to.HasValue)
+            query = query.Where(m => m.SentAt <= to.Value);
+
+        return await query
+            .OrderByDescending(m => m.SentAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
     public async Task SaveChangesAsync()
         => await _db.SaveChangesAsync();
 }

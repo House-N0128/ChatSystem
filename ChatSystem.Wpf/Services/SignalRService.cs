@@ -18,6 +18,11 @@ public class SignalRService
     public event Action<int>? UserOffline;
     public event Action<int>? UserTyping;
     public event Action<int>? UserStopTyping;
+    public event Action<int>? GroupDissolved;
+    public event Action<int, int, string, string>? GroupMemberAdded;
+    public event Action<int, int>? GroupMemberRemoved;
+    public event Action<string>? UserBanned;
+    public event Action<long>? MessageDeleted;
 
     public async Task ConnectAsync(string serverUrl)
     {
@@ -73,6 +78,21 @@ public class SignalRService
 
         _connection.On<int>("UserStopTyping", id =>
             System.Windows.Application.Current.Dispatcher.Invoke(() => UserStopTyping?.Invoke(id)));
+
+        _connection.On<int>("GroupDissolved", id =>
+            System.Windows.Application.Current.Dispatcher.Invoke(() => GroupDissolved?.Invoke(id)));
+
+        _connection.On<int, int, string, string>("GroupMemberAdded", (groupId, userId, username, nickname) =>
+            System.Windows.Application.Current.Dispatcher.Invoke(() => GroupMemberAdded?.Invoke(groupId, userId, username, nickname)));
+
+        _connection.On<int, int>("GroupMemberRemoved", (groupId, userId) =>
+            System.Windows.Application.Current.Dispatcher.Invoke(() => GroupMemberRemoved?.Invoke(groupId, userId)));
+
+        _connection.On<string>("UserBanned", msg =>
+            System.Windows.Application.Current.Dispatcher.Invoke(() => UserBanned?.Invoke(msg)));
+
+        _connection.On<long>("MessageDeleted", id =>
+            System.Windows.Application.Current.Dispatcher.Invoke(() => MessageDeleted?.Invoke(id)));
     }
 
     public async Task SendPrivateMessageAsync(int receiverId, string content)

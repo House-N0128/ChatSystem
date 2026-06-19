@@ -197,6 +197,14 @@ public class ApiService
         return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
     }
 
+    public async Task<ApiResponse> RemoveMemberAsync(int groupId, int userId)
+    {
+        SetAuth();
+        var resp = await _http.DeleteAsync($"/api/groups/{groupId}/members/{userId}");
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
+    }
+
     public async Task<ApiResponse> DeleteGroupMessageAsync(int groupId, long messageId)
     {
         SetAuth();
