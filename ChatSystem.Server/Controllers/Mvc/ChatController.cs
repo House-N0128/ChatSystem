@@ -21,4 +21,16 @@ public class ChatController : Controller
     {
         return View();
     }
+
+    [HttpGet("/chat/requests")]
+    public IActionResult Requests()
+    {
+        return View();
+    }
+
+    [HttpGet("/chat/profile")]
+    public IActionResult Profile()
+    {
+        return View();
+    }
 }

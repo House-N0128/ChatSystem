@@ -48,10 +48,14 @@ function esc(text) {
     return d.innerHTML;
 }
 function fmtTime(dt) {
-    return new Date(dt).toLocaleTimeString();
+    var d = new Date(dt);
+    var today = new Date();
+    if (d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate())
+        return d.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
+    return d.toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
 }
 function fmtDate(dt) {
-    return new Date(dt).toLocaleString();
+    return new Date(dt).toLocaleString('zh-CN');
 }
 
 // ==================== API 调用 ====================
@@ -348,7 +352,10 @@ function buildMsgHtml(msg, gid) {
     if (!mine) h += '<div class="sender">' + esc(msg.senderNickname) + '</div>';
     var isFile = msg.messageType === 1;
     if (isFile && msg.filePath) {
-        h += '<div class="content"><a href="' + msg.filePath + '" target="_blank" style="color:inherit;text-decoration:underline;">📎 ' + esc(msg.fileName || '文件') + '</a></div>';
+        h += '<div class="file-card">';
+        h += '<div class="file-icon">📄</div>';
+        h += '<div class="file-info"><div class="file-name">' + esc(msg.fileName || '文件') + '</div>';
+        h += '<a class="file-dl" href="' + msg.filePath + '" target="_blank">下载文件</a></div></div>';
     } else {
         h += '<div class="content">' + esc(msg.content) + '</div>';
     }
@@ -368,7 +375,7 @@ function loadHistory() {
     api('/api/messages/private/' + peerId + '?page=1&pageSize=50').then(function(d) {
         if (!d.success || !d.data) return;
         var html = '';
-        d.data.items.slice().reverse().forEach(function(m) { html += buildMsgHtml(m); });
+        d.data.items.forEach(function(m) { html += buildMsgHtml(m); });
         dom.messageList.innerHTML = html;
         dom.messageList.scrollTop = dom.messageList.scrollHeight;
     });
@@ -694,6 +701,51 @@ function searchHistory() {
     });
 }
 
+// ===== 好友申请页 =====
+function initRequestsPage() {
+    var payload = jwtPayload();
+    if (!payload) { location.href = '/account/login'; return; }
+    me = { id: parseInt(jv(payload, 'nameid', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier')), username: jv(payload, 'unique_name', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'), nickname: payload.nickname || '' };
+    keepAlive(); loadRequests();
+}
+function loadRequests() {
+    api('/api/friends/requests/pending').then(function(d) {
+        var el = $('requestList');
+        if (!el) return;
+        if (!d.success || !d.data || d.data.length === 0) { el.innerHTML = '<p class="text-muted">暂无待处理的申请</p>'; return; }
+        var h = '';
+        d.data.forEach(function(r) { h += '<div class="friend-row"><div class="info"><strong>' + esc(r.fromNickname) + '</strong> <small class="text-muted">@' + esc(r.fromUsername) + '</small></div><div><button class="btn btn-sm btn-success me-1" onclick="ChatApp.acceptRequest(' + r.id + ')">同意</button><button class="btn btn-sm btn-outline-danger" onclick="ChatApp.rejectRequest(' + r.id + ')">拒绝</button></div></div>'; });
+        el.innerHTML = h;
+    });
+}
+function acceptRequest(id) { api('/api/friends/requests/' + id + '/accept', 'POST').then(function(d) { alert(d.message); if (d.success) loadRequests(); }); }
+function rejectRequest(id) { api('/api/friends/requests/' + id + '/reject', 'POST').then(function(d) { alert(d.message); if (d.success) loadRequests(); }); }
+
+// ===== 个人信息页 =====
+function initProfilePage() {
+    var payload = jwtPayload();
+    if (!payload) { location.href = '/account/login'; return; }
+    me = { id: parseInt(jv(payload, 'nameid', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier')), username: jv(payload, 'unique_name', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'), nickname: payload.nickname || '' };
+    var nn = $('currentNickname'); if (nn) nn.textContent = me.nickname;
+}
+function updateNickname() {
+    var val = ($('nicknameInput') || {}).value;
+    if (!val || !val.trim()) { alert('请输入昵称'); return; }
+    api('/api/users/profile', 'PUT', { nickname: val.trim() }).then(function(d) {
+        if (d.success) { $('currentNickname').textContent = val.trim(); $('nicknameInput').value = ''; alert('昵称已更新'); }
+        else alert(d.message);
+    });
+}
+function updatePassword() {
+    var old = ($('oldPwdInput') || {}).value, nw = ($('newPwdInput') || {}).value;
+    if (!old || !nw) { alert('请填写完整'); return; }
+    if (nw.length < 6) { alert('新密码至少6位'); return; }
+    api('/api/users/password', 'PUT', { oldPassword: old, newPassword: nw }).then(function(d) {
+        if (d.success) { $('oldPwdInput').value = ''; $('newPwdInput').value = ''; alert('密码已更新'); }
+        else alert(d.message);
+    });
+}
+
 // ==================== 导出 ====================
 return {
     init: init,
@@ -718,7 +770,14 @@ return {
     loadFriends: loadFriends,
     loadGroups: loadGroups,
     initFriendsPage: initFriendsPage,
-    initHistoryPage: initHistoryPage
+    initHistoryPage: initHistoryPage,
+    initRequestsPage: initRequestsPage,
+    loadRequests: loadRequests,
+    acceptRequest: acceptRequest,
+    rejectRequest: rejectRequest,
+    initProfilePage: initProfilePage,
+    updateNickname: updateNickname,
+    updatePassword: updatePassword
 };
 
 })();

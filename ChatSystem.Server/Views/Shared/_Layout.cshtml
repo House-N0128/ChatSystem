@@ -23,8 +23,14 @@
                         <li class="nav-item" id="navFriends" style="display:none;">
                             <a class="nav-link" href="/chat/friends">好友</a>
                         </li>
+                        <li class="nav-item" id="navRequests" style="display:none;">
+                            <a class="nav-link" href="/chat/requests">申请</a>
+                        </li>
                         <li class="nav-item" id="navHistory" style="display:none;">
                             <a class="nav-link" href="/chat/history">历史</a>
+                        </li>
+                        <li class="nav-item" id="navProfile" style="display:none;">
+                            <a class="nav-link" href="/chat/profile">个人</a>
                         </li>
                         <li class="nav-item" id="navAdmin" style="display:none;">
                             <a class="nav-link" href="/admin">管理</a>
@@ -77,7 +83,9 @@
                     document.getElementById('navLogout').style.display = 'block';
                     document.getElementById('navChat').style.display = 'block';
                     document.getElementById('navFriends').style.display = 'block';
+                    document.getElementById('navRequests').style.display = 'block';
                     document.getElementById('navHistory').style.display = 'block';
+                    document.getElementById('navProfile').style.display = 'block';
                     if (parseInt(payload.role) === 1) {
                         document.getElementById('navAdmin').style.display = 'block';
                     }

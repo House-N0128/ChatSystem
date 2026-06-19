@@ -1,0 +1,21 @@
+@{
+    ViewData["Title"] = "好友申请";
+}
+<link rel="stylesheet" href="~/css/chat.css" />
+
+<div class="friends-page">
+    <h4 class="mb-3">📩 好友申请</h4>
+
+    <div class="card">
+        <h6 class="mb-3">收到的好友申请</h6>
+        <div id="requestList">
+            <p class="text-muted">加载中...</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/signalr/signalr.min.js"></script>
+    <script src="~/js/chat.js"></script>
+    <script>ChatApp.initRequestsPage();</script>
+}

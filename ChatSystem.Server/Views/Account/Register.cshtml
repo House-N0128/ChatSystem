@@ -1,85 +1,144 @@
 @{
     ViewData["Title"] = "注册";
+    Layout = null;
 }
-
-<div class="row justify-content-center mt-5">
-    <div class="col-md-5">
-        <div class="card shadow">
-            <div class="card-body p-4">
-                <h3 class="card-title text-center mb-4">用户注册</h3>
-                <div class="mb-3">
-                    <label class="form-label">用户名</label>
-                    <input type="text" id="username" class="form-control" placeholder="3-50个字符">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">昵称</label>
-                    <input type="text" id="nickname" class="form-control" placeholder="显示名称">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">密码</label>
-                    <input type="password" id="password" class="form-control" placeholder="至少6位密码">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">确认密码</label>
-                    <input type="password" id="confirmPassword" class="form-control" placeholder="再次输入密码">
-                </div>
-                <div id="regError" class="text-danger mb-2" style="display:none;"></div>
-                <div id="regSuccess" class="text-success mb-2" style="display:none;"></div>
-                <button class="btn btn-primary w-100" onclick="register()">注册</button>
-                <p class="text-center mt-3 mb-0">
-                    已有账号？<a href="/account/login">立即登录</a>
-                </p>
-            </div>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>注册 - ChatSystem</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            padding: 20px;
+        }
+        .register-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 36px 36px 28px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            animation: fadeUp .5s ease;
+        }
+        @@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .register-card .logo {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .register-card .logo .icon { font-size: 2.6rem; display: block; margin-bottom: 6px; }
+        .register-card .logo h1 { font-size: 1.4rem; font-weight: 700; color: #343a40; margin: 0; }
+        .register-card .logo p { color: #868e96; font-size: 0.82rem; margin-top: 3px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { font-size: 0.82rem; font-weight: 600; color: #495057; margin-bottom: 5px; display: block; }
+        .form-group input {
+            width: 100%; padding: 11px 14px;
+            border: 1.5px solid #dee2e6; border-radius: 12px;
+            font-size: 0.88rem; outline: none;
+            transition: border-color .2s, box-shadow .2s;
+            background: #f8f9fa;
+        }
+        .form-group input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.12); background: #fff; }
+        .reg-btn {
+            width: 100%; padding: 12px; border: none; border-radius: 12px;
+            font-size: 1rem; font-weight: 700; color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer; transition: transform .1s, box-shadow .2s;
+            margin-top: 4px;
+        }
+        .reg-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(102,126,234,0.35); }
+        .reg-btn:active { transform: translateY(0); }
+        .reg-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .msg-box {
+            font-size: 0.85rem; margin-bottom: 12px; display: none;
+            text-align: center; padding: 8px 12px; border-radius: 8px;
+        }
+        .msg-box.error { display: block; background: #fff5f5; color: #e03137; }
+        .msg-box.success { display: block; background: #f0fff4; color: #2b8a3e; }
+        .footer-text { text-align: center; margin-top: 18px; font-size: 0.85rem; color: #868e96; }
+        .footer-text a { color: #667eea; text-decoration: none; font-weight: 600; }
+        .footer-text a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="register-card">
+        <div class="logo">
+            <span class="icon">📝</span>
+            <h1>创建账号</h1>
+            <p>注册后等待管理员审核即可使用</p>
+        </div>
+        <div class="msg-box" id="msgBox"></div>
+        <div class="form-group">
+            <label>用户名</label>
+            <input type="text" id="username" placeholder="3-50个字符" autocomplete="username" autofocus>
+        </div>
+        <div class="form-group">
+            <label>昵称</label>
+            <input type="text" id="nickname" placeholder="显示名称">
+        </div>
+        <div class="form-group">
+            <label>密码</label>
+            <input type="password" id="password" placeholder="至少6位密码" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <label>确认密码</label>
+            <input type="password" id="confirmPassword" placeholder="再次输入密码" autocomplete="new-password">
+        </div>
+        <button class="reg-btn" onclick="register()" id="regBtn">注 册</button>
+        <div class="footer-text">
+            已有账号？<a href="/account/login">立即登录</a>
         </div>
     </div>
-</div>
 
-@section Scripts {
-<script>
-function register() {
-    var username = document.getElementById('username').value.trim();
-    var nickname = document.getElementById('nickname').value.trim();
-    var password = document.getElementById('password').value;
-    var confirm = document.getElementById('confirmPassword').value;
+    <script>
+    document.addEventListener('keydown', function(e) { if (e.key === 'Enter') register(); });
 
-    if (!username || !nickname || !password) {
-        showError('请填写所有字段'); return;
+    function register() {
+        var username = document.getElementById('username').value.trim();
+        var nickname = document.getElementById('nickname').value.trim();
+        var password = document.getElementById('password').value;
+        var confirm = document.getElementById('confirmPassword').value;
+        var msg = document.getElementById('msgBox');
+        var btn = document.getElementById('regBtn');
+
+        if (!username || !nickname || !password) { msg.className = 'msg-box error'; msg.textContent = '请填写所有字段'; return; }
+        if (password !== confirm) { msg.className = 'msg-box error'; msg.textContent = '两次密码不一致'; return; }
+        if (password.length < 6) { msg.className = 'msg-box error'; msg.textContent = '密码至少6位'; return; }
+
+        msg.className = 'msg-box';
+        btn.disabled = true; btn.textContent = '注册中...';
+
+        fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, nickname })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false; btn.textContent = '注 册';
+            if (data.success) {
+                msg.className = 'msg-box success';
+                msg.textContent = data.message + '，3秒后跳转登录页...';
+                setTimeout(function() { location.href = '/account/login'; }, 3000);
+            } else {
+                msg.className = 'msg-box error';
+                msg.textContent = data.message;
+            }
+        })
+        .catch(function() {
+            btn.disabled = false; btn.textContent = '注 册';
+            msg.className = 'msg-box error';
+            msg.textContent = '网络错误，请检查服务器';
+        });
     }
-    if (password !== confirm) {
-        showError('两次密码不一致'); return;
-    }
-    if (password.length < 6) {
-        showError('密码至少6位'); return;
-    }
-
-    var btn = document.querySelector('button');
-    btn.disabled = true; btn.textContent = '注册中...';
-
-    fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, nickname })
-    })
-    .then(r => r.json())
-    .then(data => {
-        btn.disabled = false; btn.textContent = '注册';
-        if (data.success) {
-            document.getElementById('regError').style.display = 'none';
-            var el = document.getElementById('regSuccess');
-            el.textContent = data.message + ' 3秒后跳转登录页...';
-            el.style.display = 'block';
-            setTimeout(() => location.href = '/account/login', 3000);
-        } else {
-            showError(data.message);
-        }
-    })
-    .catch(e => { btn.disabled = false; btn.textContent = '注册'; showError('网络错误'); });
-}
-
-function showError(msg) {
-    var el = document.getElementById('regError');
-    el.textContent = msg; el.style.display = 'block';
-    document.getElementById('regSuccess').style.display = 'none';
-}
-</script>
-}
+    </script>
+</body>
+</html>

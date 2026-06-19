@@ -132,6 +132,8 @@ public class GroupsController : ControllerBase
             SenderNickname = m.Sender?.Nickname ?? "",
             Content = m.Content,
             MessageType = m.MessageType,
+            FileName = m.FileName,
+            FilePath = m.FilePath,
             SentAt = m.SentAt
         }).ToList();
 
