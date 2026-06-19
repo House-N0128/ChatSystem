@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using ChatSystem.Core.DTOs;
@@ -100,12 +101,116 @@ public class ApiService
         return JsonSerializer.Deserialize<ApiResponse<PagedResult<MessageDTO>>>(json, JsonOpts)!;
     }
 
+    public async Task<ApiResponse> DeleteMessageAsync(long messageId)
+    {
+        SetAuth();
+        var resp = await _http.DeleteAsync($"/api/messages/{messageId}");
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse<MessageDTO>> UploadFileAsync(int receiverId, string filePath)
+    {
+        SetAuth();
+        using var form = new MultipartFormDataContent();
+        var fileStream = File.OpenRead(filePath);
+        var fileName = Path.GetFileName(filePath);
+        form.Add(new StreamContent(fileStream), "file", fileName);
+        form.Add(new StringContent(receiverId.ToString()), "receiverId");
+        var resp = await _http.PostAsync("/api/messages/file", form);
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse<MessageDTO>>(json, JsonOpts)!;
+    }
+
     // ===== Users =====
     public async Task<ApiResponse<List<UserDTO>>> SearchUsersAsync(string keyword)
     {
         SetAuth();
         var json = await _http.GetStringAsync($"/api/users/search?keyword={Uri.EscapeDataString(keyword)}");
         return JsonSerializer.Deserialize<ApiResponse<List<UserDTO>>>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse> UpdateProfileAsync(string nickname)
+    {
+        SetAuth();
+        var resp = await _http.PutAsJsonAsync("/api/users/profile", new { nickname });
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse> UpdatePasswordAsync(string oldPassword, string newPassword)
+    {
+        SetAuth();
+        var resp = await _http.PutAsJsonAsync("/api/users/password", new { oldPassword, newPassword });
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
+    }
+
+    // ===== Groups =====
+    public async Task<ApiResponse<List<GroupDTO>>> GetMyGroupsAsync()
+    {
+        SetAuth();
+        var json = await _http.GetStringAsync("/api/groups");
+        return JsonSerializer.Deserialize<ApiResponse<List<GroupDTO>>>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse<GroupDTO>> CreateGroupAsync(string name, List<int> memberIds)
+    {
+        SetAuth();
+        var resp = await _http.PostAsJsonAsync("/api/groups", new { name, memberIds });
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse<GroupDTO>>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse<GroupDTO>> GetGroupAsync(int groupId)
+    {
+        SetAuth();
+        var json = await _http.GetStringAsync($"/api/groups/{groupId}");
+        return JsonSerializer.Deserialize<ApiResponse<GroupDTO>>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse<List<GroupMessageDTO>>> GetGroupMessagesAsync(int groupId, int page = 1, int pageSize = 50)
+    {
+        SetAuth();
+        var json = await _http.GetStringAsync($"/api/groups/{groupId}/messages?page={page}&pageSize={pageSize}");
+        return JsonSerializer.Deserialize<ApiResponse<List<GroupMessageDTO>>>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse<GroupMessageDTO>> UploadGroupFileAsync(int groupId, string filePath)
+    {
+        SetAuth();
+        using var form = new MultipartFormDataContent();
+        var fileStream = File.OpenRead(filePath);
+        var fileName = Path.GetFileName(filePath);
+        form.Add(new StreamContent(fileStream), "file", fileName);
+        form.Add(new StringContent(groupId.ToString()), "groupId");
+        var resp = await _http.PostAsync("/api/groups/file", form);
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse<GroupMessageDTO>>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse> AddGroupMemberAsync(int groupId, int userId)
+    {
+        SetAuth();
+        var resp = await _http.PostAsJsonAsync($"/api/groups/{groupId}/members", userId);
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse> DeleteGroupMessageAsync(int groupId, long messageId)
+    {
+        SetAuth();
+        var resp = await _http.DeleteAsync($"/api/groups/{groupId}/messages/{messageId}");
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse> DeleteGroupAsync(int groupId)
+    {
+        SetAuth();
+        var resp = await _http.DeleteAsync($"/api/groups/{groupId}");
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
     }
 
     // ===== Admin =====
@@ -116,10 +221,39 @@ public class ApiService
         return JsonSerializer.Deserialize<ApiResponse<List<UserDTO>>>(json, JsonOpts)!;
     }
 
+    public async Task<ApiResponse<PagedResult<UserDTO>>> GetAllUsersAsync(int page = 1, int pageSize = 50)
+    {
+        SetAuth();
+        var json = await _http.GetStringAsync($"/api/admin/users?page={page}&pageSize={pageSize}");
+        return JsonSerializer.Deserialize<ApiResponse<PagedResult<UserDTO>>>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse<List<GroupDTO>>> AdminGetAllGroupsAsync()
+    {
+        SetAuth();
+        var json = await _http.GetStringAsync("/api/admin/groups");
+        return JsonSerializer.Deserialize<ApiResponse<List<GroupDTO>>>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse<PagedResult<MessageDTO>>> AdminGetUserMessagesAsync(int userId, int page = 1, int pageSize = 100)
+    {
+        SetAuth();
+        var json = await _http.GetStringAsync($"/api/admin/users/{userId}/messages?page={page}&pageSize={pageSize}");
+        return JsonSerializer.Deserialize<ApiResponse<PagedResult<MessageDTO>>>(json, JsonOpts)!;
+    }
+
     public async Task<ApiResponse> ApproveUserAsync(int userId)
     {
         SetAuth();
         var resp = await _http.PostAsync($"/api/admin/users/{userId}/approve", null);
+        var json = await resp.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
+    }
+
+    public async Task<ApiResponse> RejectUserAsync(int userId)
+    {
+        SetAuth();
+        var resp = await _http.PostAsync($"/api/admin/users/{userId}/reject", null);
         var json = await resp.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<ApiResponse>(json, JsonOpts)!;
     }

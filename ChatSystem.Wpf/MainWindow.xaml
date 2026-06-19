@@ -2,16 +2,106 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:converters="clr-namespace:ChatSystem.Wpf.Converters"
-        Title="💬 ChatSystem" Height="650" Width="1000"
+        Title="💬 ChatSystem" Height="680" Width="1000"
         MinHeight="500" MinWidth="800"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Microsoft YaHei, Segoe UI">
     <Window.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
         <converters:InverseBoolConverter x:Key="InverseBool"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="HideWhenAdmin"/>
+        <converters:StringNotEmptyToVisibilityConverter x:Key="StrNotEmptyVis"/>
         <converters:OnlineStatusToColorConverter x:Key="OnlineColor"/>
         <converters:MessageAlignmentConverter x:Key="MsgAlign"/>
         <converters:MessageBackgroundConverter x:Key="MsgBg"/>
         <converters:MessageForegroundConverter x:Key="MsgFg"/>
+
+        <!-- 侧边栏按钮 -->
+        <Style x:Key="SidebarBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#ADB5BD"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="18,12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2B303A"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 主按钮 -->
+        <Style x:Key="PrimaryBtn" TargetType="Button">
+            <Setter Property="Background" Value="#4C6EF5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,9"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3B5BDB"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#ADB5BD"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 危险按钮 -->
+        <Style x:Key="DangerBtn" TargetType="Button">
+            <Setter Property="Background" Value="#FA5252"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E03137"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 文本框样式 -->
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="#DEE2E6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -21,72 +111,98 @@
         </Grid.ColumnDefinitions>
 
         <!-- ===== 侧边栏 ===== -->
-        <Border Grid.Column="0" Background="#212529">
+        <Border Grid.Column="0" Background="#1E2128">
             <StackPanel>
                 <!-- 用户信息 -->
-                <StackPanel Margin="16,16,16,8">
-                    <TextBlock Foreground="White" FontSize="18" FontWeight="Bold"
+                <StackPanel Margin="18,20,18,12">
+                    <Border Width="44" Height="44" CornerRadius="22" Background="#4C6EF5" HorizontalAlignment="Left" Margin="0,0,0,8">
+                        <TextBlock Text="U"
+                                   FontSize="18" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   FontWeight="Bold"/>
+                    </Border>
+                    <TextBlock Foreground="White" FontSize="16" FontWeight="Bold"
                                Text="{Binding UserDisplayName}"/>
-                    <TextBlock Foreground="#ADB5BD" FontSize="12"
+                    <TextBlock Foreground="#6C757D" FontSize="12"
                                Text="{Binding UserRoleText}"/>
                 </StackPanel>
-                <Separator Background="#495057" Margin="8,0"/>
+                <Rectangle Height="1" Fill="#2B303A" Margin="12,0"/>
 
-                <!-- 导航按钮 -->
-                <Button Content="💬 聊天" Style="{StaticResource SidebarBtn}"
-                        Command="{Binding NavigateCommand}" CommandParameter="chat"/>
-                <Button Content="👥 好友管理" Style="{StaticResource SidebarBtn}"
-                        Command="{Binding NavigateCommand}" CommandParameter="friends"/>
-                <Button Content="📩 好友申请" Style="{StaticResource SidebarBtn}"
-                        Command="{Binding NavigateCommand}" CommandParameter="requests"/>
-                <Button Content="📋 聊天记录" Style="{StaticResource SidebarBtn}"
-                        Command="{Binding NavigateCommand}" CommandParameter="history"/>
+                <!-- 导航按钮（非管理员可见） -->
+                <StackPanel Visibility="{Binding ShowAdmin, Converter={StaticResource HideWhenAdmin}}" Margin="0,8,0,0">
+                    <Button Content="💬  聊天" Style="{StaticResource SidebarBtn}"
+                            Command="{Binding NavigateCommand}" CommandParameter="chat"/>
+                    <Button Content="👥  好友管理" Style="{StaticResource SidebarBtn}"
+                            Command="{Binding NavigateCommand}" CommandParameter="friends"/>
+                    <Button Content="📩  好友申请" Style="{StaticResource SidebarBtn}"
+                            Command="{Binding NavigateCommand}" CommandParameter="requests"/>
+                    <Button Content="👥  群聊" Style="{StaticResource SidebarBtn}"
+                            Command="{Binding NavigateCommand}" CommandParameter="groups"/>
+                    <Button Content="📋  聊天记录" Style="{StaticResource SidebarBtn}"
+                            Command="{Binding NavigateCommand}" CommandParameter="history"/>
+                </StackPanel>
+
+                <Button Content="⚙️  个人信息" Style="{StaticResource SidebarBtn}"
+                        Command="{Binding NavigateCommand}" CommandParameter="profile"/>
 
                 <!-- 管理员按钮 -->
-                <Button Content="🛡️ 管理员面板" Style="{StaticResource SidebarBtn}"
+                <Button Content="🛡️  管理员面板" Style="{StaticResource SidebarBtn}"
                         Command="{Binding NavigateCommand}" CommandParameter="admin"
                         Visibility="{Binding ShowAdmin, Converter={StaticResource BoolToVis}}"/>
 
-                <Separator Background="#495057" Margin="8,16,8,8"/>
+                <Rectangle Height="1" Fill="#2B303A" Margin="12,8"/>
 
-                <Button Content="🚪 退出登录" Style="{StaticResource SidebarBtn}"
+                <Button Content="🚪  退出登录" Style="{StaticResource SidebarBtn}"
                         Command="{Binding LogoutCommand}" Foreground="#FF6B6B"/>
             </StackPanel>
         </Border>
 
         <!-- ===== 主内容区 ===== -->
-        <Border Grid.Column="1" Background="#F8F9FA">
+        <Border Grid.Column="1" Background="#F4F6F8">
             <Grid>
-                <!-- 聊天页面 -->
+                <!-- ===== 聊天页面 ===== -->
                 <Grid Visibility="{Binding IsChatPage, Converter={StaticResource BoolToVis}}">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="250"/>
+                        <ColumnDefinition Width="280"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- 好友列表 -->
-                    <Border Grid.Column="0" BorderBrush="#DEE2E6" BorderThickness="0,0,1,0" Background="White">
-                        <StackPanel>
-                            <TextBlock Text="好友列表" FontWeight="Bold" Padding="12,12,12,8"
-                                       Background="#F1F3F5"/>
-                            <ListBox ItemsSource="{Binding Friends}" SelectedItem="{Binding SelectedFriend}"
-                                     BorderThickness="0" Margin="0">
+                    <Border Grid.Column="0" BorderBrush="#E9ECEF" BorderThickness="0,0,1,0" Background="White">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Padding="16,14" BorderBrush="#E9ECEF" BorderThickness="0,0,0,1">
+                                <TextBlock Text="好友列表" FontWeight="Bold" FontSize="15" Foreground="#343A40"/>
+                            </Border>
+                            <ListBox Grid.Row="1" ItemsSource="{Binding Friends}"
+                                     BorderThickness="0" Margin="0" Background="Transparent"
+                                     SelectionChanged="FriendList_SelectionChanged">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Margin="8,6">
-                                            <Ellipse Width="10" Height="10" Margin="0,0,8,0"
-                                                     Fill="{Binding IsOnline, Converter={StaticResource OnlineColor}}"/>
-                                            <TextBlock Text="{Binding FriendNickname}" FontSize="14"/>
-                                            <TextBlock Text="●" Foreground="Red" FontSize="10" Margin="4,0,0,0"
-                                                       Visibility="{Binding HasUnread, Converter={StaticResource BoolToVis}}"/>
-                                        </StackPanel>
+                                        <Border Padding="12,10" Margin="4,2" CornerRadius="8" Background="Transparent">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Ellipse Grid.Column="0" Width="10" Height="10" Margin="0,0,10,0"
+                                                         Fill="{Binding IsOnline, Converter={StaticResource OnlineColor}}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding FriendNickname}" FontSize="14" Foreground="#343A40"/>
+                                                <TextBlock Grid.Column="2" Text="●" Foreground="#FA5252" FontSize="10"
+                                                           Visibility="{Binding HasUnread, Converter={StaticResource BoolToVis}}"/>
+                                            </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                        </StackPanel>
+                        </Grid>
                     </Border>
 
-                    <!-- 聊天区域 -->
+                    <!-- 私聊区域 -->
                     <Grid Grid.Column="1">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -94,32 +210,70 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- 聊天标题 -->
-                        <Border Grid.Row="0" Background="#F1F3F5" Padding="12,10"
-                                BorderBrush="#DEE2E6" BorderThickness="0,0,0,1">
-                            <TextBlock FontWeight="Bold" FontSize="14">
+                        <Border Grid.Row="0" Background="White" Padding="16,12"
+                                BorderBrush="#E9ECEF" BorderThickness="0,0,0,1">
+                            <TextBlock FontWeight="Bold" FontSize="15" Foreground="#343A40">
                                 <Run Text="💬 "/>
-                                <Run Text="{Binding SelectedFriend.FriendNickname, FallbackValue='请选择好友'}"/>
+                                <Run Text="{Binding SelectedFriend.FriendNickname, FallbackValue='选择好友开始聊天'}"/>
                             </TextBlock>
                         </Border>
 
-                        <!-- 消息列表 -->
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Messages}" Margin="12">
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" x:Name="ChatScrollViewer"
+                                      Background="#F4F6F8">
+                            <ItemsControl ItemsSource="{Binding Messages}" Margin="16">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Padding="10,8" Margin="0,4" CornerRadius="10"
+                                        <Border Padding="12,10" Margin="0,5" CornerRadius="14"
                                                 Background="{Binding IsMine, Converter={StaticResource MsgBg}}"
                                                 HorizontalAlignment="{Binding IsMine, Converter={StaticResource MsgAlign}}"
-                                                MaxWidth="300">
+                                                MaxWidth="340"
+                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="删除消息" FontSize="12"
+                                                              Visibility="{Binding IsMine, Converter={StaticResource BoolToVis}}"
+                                                              Command="{Binding PlacementTarget.Tag.DeleteMessageCommand,
+                                                                  RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext.Id,
+                                                                  RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
                                             <StackPanel>
-                                                <TextBlock Text="{Binding SenderNickname}" FontSize="11"
+                                                <TextBlock Text="{Binding SenderNickname}" FontSize="11" FontWeight="Bold"
                                                            Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"
                                                            Visibility="{Binding IsMine, Converter={StaticResource InverseBool}}"/>
                                                 <TextBlock Text="{Binding Content}" FontSize="14" TextWrapping="Wrap"
-                                                           Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"/>
+                                                           Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                           LineHeight="20"
+                                                           Visibility="{Binding IsFile, Converter={StaticResource InverseBool}}"/>
+                                                <Border Padding="10,8" CornerRadius="8" Cursor="Hand" MouseDown="FileLink_MouseDown"
+                                                        Background="{Binding IsMine, Converter={StaticResource MsgBg}}"
+                                                        BorderBrush="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                        BorderThickness="1" Opacity="0.9"
+                                                        Visibility="{Binding IsFile, Converter={StaticResource BoolToVis}}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6"
+                                                                Background="{Binding IsMine, Converter={StaticResource MsgFg}}" Opacity="0.15"
+                                                                Margin="0,0,10,0">
+                                                            <TextBlock Text="📄" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding FileName}" FontSize="12" FontWeight="Bold"
+                                                                       Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="点击下载" FontSize="10"
+                                                                       Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                                       Opacity="0.6"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
                                                 <TextBlock Text="{Binding SentAt}" FontSize="10"
                                                            Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                           Opacity="0.7"
                                                            HorizontalAlignment="Right" Margin="0,4,0,0"/>
                                             </StackPanel>
                                         </Border>
@@ -128,18 +282,23 @@
                             </ItemsControl>
                         </ScrollViewer>
 
-                        <!-- 输入区 -->
-                        <Border Grid.Row="2" Background="White" Padding="10"
-                                BorderBrush="#DEE2E6" BorderThickness="0,1,0,0">
+                        <Border Grid.Row="2" Background="White" Padding="12,10"
+                                BorderBrush="#E9ECEF" BorderThickness="0,1,0,0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
-                                         Padding="10,8" VerticalAlignment="Center"
+                                <Button Grid.Column="0" Content="📎" FontSize="16" Width="36" Height="36"
+                                        Padding="0" Margin="0,0,8,0"
+                                        Background="#F1F3F5" BorderThickness="1" BorderBrush="#DEE2E6"
+                                        IsEnabled="{Binding SelectedFriend, Converter={StaticResource BoolToVis}}"
+                                        Command="{Binding UploadFileCommand}"/>
+                                <TextBox Grid.Column="1" Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="10,8" BorderBrush="#DEE2E6" BorderThickness="1"
                                          IsEnabled="{Binding SelectedFriend, Converter={StaticResource BoolToVis}}"/>
-                                <Button Grid.Column="1" Content="发送" Margin="8,0,0,0"
+                                <Button Grid.Column="2" Content="发送" Margin="8,0,0,0" Padding="14,8"
                                         Style="{StaticResource PrimaryBtn}"
                                         Command="{Binding SendMessageCommand}"/>
                             </Grid>
@@ -147,54 +306,71 @@
                     </Grid>
                 </Grid>
 
-                <!-- 好友管理页面 -->
-                <Grid Visibility="{Binding IsFriendsPage, Converter={StaticResource BoolToVis}}" Margin="16">
+                <!-- ===== 好友管理页面 ===== -->
+                <Grid Visibility="{Binding IsFriendsPage, Converter={StaticResource BoolToVis}}" Margin="20">
                     <StackPanel>
-                        <TextBlock Text="添加好友" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="添加好友" FontWeight="Bold" FontSize="18" Foreground="#343A40" Margin="0,0,0,12"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="8" Margin="0,0,8,0"/>
-                            <Button Grid.Column="1" Content="搜索" Style="{StaticResource PrimaryBtn}"
+                                     Padding="10,8" Margin="0,0,8,0"/>
+                            <Button Grid.Column="1" Content="🔍 搜索" Style="{StaticResource PrimaryBtn}"
                                     Command="{Binding SearchUsersCommand}"/>
                         </Grid>
-                        <ListBox ItemsSource="{Binding SearchResults}" Margin="0,8" MaxHeight="200">
+                        <ListBox ItemsSource="{Binding SearchResults}" Margin="0,10"
+                                 Background="Transparent" BorderThickness="0"
+                                 HorizontalContentAlignment="Stretch">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Nickname}" FontWeight="Bold"/>
-                                            <TextBlock Text="{Binding Username}" Foreground="Gray"/>
-                                        </StackPanel>
-                                        <Button Grid.Column="1" Content="添加好友"
-                                                Command="{Binding DataContext.AddFriendCommand,
-                                                RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                CommandParameter="{Binding Id}" Padding="8,3"/>
-                                    </Grid>
+                                    <Border Padding="14,12" Margin="0,4" Background="White" CornerRadius="10"
+                                            BorderBrush="#E9ECEF" BorderThickness="1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <!-- 头像 -->
+                                            <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20"
+                                                    Background="#D0EBFF" Margin="0,0,14,0">
+                                                <TextBlock Text="{Binding Nickname}" FontSize="16" FontWeight="Bold"
+                                                           Foreground="#1971C2"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <!-- 信息 -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Nickname}" FontWeight="Bold" FontSize="15" Foreground="#343A40"/>
+                                                <TextBlock Text="{Binding Username}" Foreground="#868E96" FontSize="12" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <!-- 添加按钮 -->
+                                            <Button Grid.Column="2" Content="＋ 添加" Width="80"
+                                                    Style="{StaticResource PrimaryBtn}" Padding="10,6"
+                                                    Command="{Binding DataContext.AddFriendCommand,
+                                                    RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                    CommandParameter="{Binding Id}"/>
+                                        </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <TextBlock Text="我的好友" FontWeight="Bold" FontSize="14" Margin="0,16,0,8"/>
+                        <TextBlock Text="我的好友" FontWeight="Bold" FontSize="16" Foreground="#343A40" Margin="0,20,0,10"/>
                         <ItemsControl ItemsSource="{Binding Friends}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="8" Margin="0,2" Background="White" CornerRadius="6">
+                                    <Border Padding="12,10" Margin="0,3" Background="White" CornerRadius="8"
+                                            BorderBrush="#E9ECEF" BorderThickness="1">
                                         <Grid>
                                             <StackPanel Orientation="Horizontal">
-                                                <Ellipse Width="8" Height="8" Margin="0,0,8,0"
+                                                <Ellipse Width="10" Height="10" Margin="0,0,10,0"
                                                          Fill="{Binding IsOnline, Converter={StaticResource OnlineColor}}"/>
-                                                <TextBlock Text="{Binding FriendNickname}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding FriendNickname}" FontSize="14" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <Button HorizontalAlignment="Right" Content="删除" Foreground="Red"
-                                                    Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            <Button HorizontalAlignment="Right" Content="删除好友" Foreground="#FA5252"
+                                                    Background="Transparent" BorderThickness="0" Cursor="Hand" FontSize="12"
                                                     Command="{Binding DataContext.RemoveFriendCommand,
                                                     RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                     CommandParameter="{Binding FriendUserId}"/>
@@ -206,46 +382,512 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- 好友申请页面 -->
-                <Grid Visibility="{Binding IsRequestsPage, Converter={StaticResource BoolToVis}}" Margin="16">
+                <!-- ===== 好友申请页面 ===== -->
+                <Grid Visibility="{Binding IsRequestsPage, Converter={StaticResource BoolToVis}}" Margin="20">
                     <StackPanel>
-                        <TextBlock Text="收到的好友申请" FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="好友申请" FontWeight="Bold" FontSize="18" Foreground="#343A40" Margin="0,0,0,12"/>
                         <ItemsControl ItemsSource="{Binding PendingRequests}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="10" Margin="0,4" Background="White" CornerRadius="6">
+                                    <Border Padding="14,12" Margin="0,4" Background="White" CornerRadius="10"
+                                            BorderBrush="#E9ECEF" BorderThickness="1">
                                         <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
                                             <StackPanel>
-                                                <TextBlock FontWeight="Bold" Text="{Binding FromNickname}"/>
-                                                <TextBlock Text="{Binding FromUsername}" Foreground="Gray"/>
+                                                <TextBlock FontWeight="Bold" FontSize="14" Text="{Binding FromNickname}"/>
+                                                <TextBlock Text="{Binding FromUsername}" Foreground="#6C757D" FontSize="12"/>
                                                 <TextBlock Text="{Binding SentAt, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
-                                                           FontSize="11" Foreground="Gray"/>
+                                                           FontSize="11" Foreground="#ADB5BD" Margin="0,2,0,0"/>
                                             </StackPanel>
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                <Button Content="同意" Style="{StaticResource PrimaryBtn}" Margin="0,0,8,0"
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="✓ 同意" Style="{StaticResource PrimaryBtn}" Margin="0,0,8,0"
                                                         Command="{Binding DataContext.AcceptRequestCommand,
                                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                         CommandParameter="{Binding Id}"/>
-                                                <Button Content="拒绝"
+                                                <Button Content="✗ 拒绝" Foreground="#FA5252" Background="#FFF5F5"
+                                                        BorderThickness="1" BorderBrush="#FFC9C9" Cursor="Hand"
+                                                        Padding="14,9"
                                                         Command="{Binding DataContext.RejectRequestCommand,
                                                         RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                        CommandParameter="{Binding Id}" Padding="12,8"/>
+                                                        CommandParameter="{Binding Id}"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock Text="暂无待处理的申请" Foreground="Gray" Margin="0,8"
+                        <TextBlock Text="暂无待处理的申请" Foreground="#ADB5BD" FontSize="13" Margin="0,16,0,0"
+                                   HorizontalAlignment="Center"
                                    Visibility="{Binding PendingRequests.Count, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"/>
                     </StackPanel>
                 </Grid>
 
-                <!-- 管理员面板 -->
-                <Grid Visibility="{Binding IsAdminPage, Converter={StaticResource BoolToVis}}" Margin="16">
-                    <ContentPresenter>
-                        <!-- Admin content handled in page -->
-                    </ContentPresenter>
+                <!-- ===== 群聊页面 ===== -->
+                <Grid Visibility="{Binding IsGroupsPage, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" BorderBrush="#E9ECEF" BorderThickness="0,0,1,0" Background="White">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Padding="16,14" BorderBrush="#E9ECEF" BorderThickness="0,0,0,1">
+                                <TextBlock Text="我的群组" FontWeight="Bold" FontSize="15" Foreground="#343A40"/>
+                            </Border>
+                            <ListBox Grid.Row="1" ItemsSource="{Binding Groups}"
+                                     BorderThickness="0" Background="Transparent"
+                                     SelectionChanged="GroupList_SelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="12,10" Margin="4,2" CornerRadius="8" Background="Transparent">
+                                            <TextBlock Text="{Binding DisplayText}" FontSize="14" Foreground="#343A40"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <Border Grid.Row="2" Padding="14,12" BorderBrush="#E9ECEF" BorderThickness="0,1,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="创建新群组" FontWeight="Bold" FontSize="13" Foreground="#495057" Margin="0,0,0,8"/>
+                                    <TextBox Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}"
+                                             Padding="8" Margin="0,0,0,8"/>
+                                    <Button Content="＋ 创建群组" Style="{StaticResource PrimaryBtn}"
+                                            Command="{Binding CreateGroupCommand}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Background="White" Padding="16,12"
+                                BorderBrush="#E9ECEF" BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" FontWeight="Bold" FontSize="15" Foreground="#343A40" VerticalAlignment="Center">
+                                    <Run Text="👥 "/>
+                                    <Run Text="{Binding SelectedGroup.Name, FallbackValue='选择群组开始聊天'}"/>
+                                </TextBlock>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Content="解散" FontSize="11" Padding="10,5" Margin="0,0,8,0"
+                                            Foreground="#FA5252" Background="#FFF5F5"
+                                            BorderThickness="1" BorderBrush="#FFC9C9" Cursor="Hand"
+                                            Visibility="{Binding HasSelectedGroup, Converter={StaticResource BoolToVis}}"
+                                            Command="{Binding DissolveGroupCommand}"/>
+                                    <Button Content="＋ 邀请成员" FontSize="12" Padding="12,6"
+                                            Style="{StaticResource PrimaryBtn}"
+                                            Visibility="{Binding HasSelectedGroup, Converter={StaticResource BoolToVis}}"
+                                            Command="{Binding InviteFriendCommand}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" x:Name="GroupScrollViewer"
+                                      Background="#F4F6F8">
+                            <ItemsControl ItemsSource="{Binding GroupMessages}" Margin="16">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="12,10" Margin="0,5" CornerRadius="14"
+                                                Background="{Binding IsMine, Converter={StaticResource MsgBg}}"
+                                                HorizontalAlignment="{Binding IsMine, Converter={StaticResource MsgAlign}}"
+                                                MaxWidth="340"
+                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="删除消息" FontSize="12"
+                                                              Visibility="{Binding IsMine, Converter={StaticResource BoolToVis}}"
+                                                              Command="{Binding PlacementTarget.Tag.DeleteMessageCommand,
+                                                                  RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext.Id,
+                                                                  RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding SenderNickname}" FontSize="11" FontWeight="Bold"
+                                                           Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"/>
+                                                <TextBlock Text="{Binding Content}" FontSize="14" TextWrapping="Wrap"
+                                                           Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                           LineHeight="20"
+                                                           Visibility="{Binding IsFile, Converter={StaticResource InverseBool}}"/>
+                                                <Border Padding="10,8" CornerRadius="8" Cursor="Hand" MouseDown="FileLink_MouseDown"
+                                                        Background="{Binding IsMine, Converter={StaticResource MsgBg}}"
+                                                        BorderBrush="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                        BorderThickness="1" Opacity="0.9"
+                                                        Visibility="{Binding IsFile, Converter={StaticResource BoolToVis}}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6"
+                                                                Background="{Binding IsMine, Converter={StaticResource MsgFg}}" Opacity="0.15"
+                                                                Margin="0,0,10,0">
+                                                            <TextBlock Text="📄" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding FileName}" FontSize="12" FontWeight="Bold"
+                                                                       Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="点击下载" FontSize="10"
+                                                                       Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                                       Opacity="0.6"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                                <TextBlock Text="{Binding SentAt}" FontSize="10"
+                                                           Foreground="{Binding IsMine, Converter={StaticResource MsgFg}}"
+                                                           Opacity="0.7"
+                                                           HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <Border Grid.Row="2" Background="White" Padding="12,10"
+                                BorderBrush="#E9ECEF" BorderThickness="0,1,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="📎" FontSize="16" Width="36" Height="36"
+                                        Padding="0" Margin="0,0,8,0"
+                                        Background="#F1F3F5" BorderThickness="1" BorderBrush="#DEE2E6"
+                                        IsEnabled="{Binding SelectedGroup, Converter={StaticResource BoolToVis}}"
+                                        Command="{Binding UploadGroupFileCommand}"/>
+                                <TextBox Grid.Column="1" Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="10,8" BorderBrush="#DEE2E6" BorderThickness="1"
+                                         IsEnabled="{Binding SelectedGroup, Converter={StaticResource BoolToVis}}"/>
+                                <Button Grid.Column="2" Content="发送" Margin="8,0,0,0"
+                                        Style="{StaticResource PrimaryBtn}"
+                                        Command="{Binding SendMessageCommand}"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- ===== 聊天记录页面 ===== -->
+                <Grid Visibility="{Binding IsHistoryPage, Converter={StaticResource BoolToVis}}" Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="聊天记录" FontWeight="Bold" FontSize="20" Foreground="#343A40" Margin="0,0,0,12"/>
+                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding HistorySearchKeyword, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="10,8" Margin="0,0,8,0"/>
+                        <Button Grid.Column="1" Content="🔍 搜索" Style="{StaticResource PrimaryBtn}"
+                                Command="{Binding LoadHistoryCommand}"/>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding HistoryMessages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="14,12" Margin="0,4" Background="White" CornerRadius="10"
+                                            BorderBrush="#E9ECEF" BorderThickness="1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding DirectionText}" FontWeight="Bold" FontSize="12"
+                                                           Foreground="#495057"/>
+                                                <TextBlock Text="{Binding Content}" FontSize="13" Margin="0,4,0,0"
+                                                           TextWrapping="Wrap" Foreground="#343A40"/>
+                                                <TextBlock Text="{Binding SentAt}" FontSize="11" Foreground="#ADB5BD" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Content="🗑" Foreground="#FA5252" FontSize="14"
+                                                    Background="Transparent" BorderThickness="0"
+                                                    Cursor="Hand" VerticalAlignment="Center" Margin="8,0,0,0" Padding="6,4"
+                                                    Visibility="{Binding IsMine, Converter={StaticResource BoolToVis}}"
+                                                    Command="{Binding DataContext.DeleteHistoryMessageCommand,
+                                                        RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding Id}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- ===== 个人信息页面 ===== -->
+                <Grid Visibility="{Binding IsProfilePage, Converter={StaticResource BoolToVis}}" Margin="20">
+                    <StackPanel MaxWidth="400">
+                        <TextBlock Text="个人信息" FontWeight="Bold" FontSize="20" Foreground="#343A40" Margin="0,0,0,20"/>
+
+                        <Border Padding="16,14" Background="White" CornerRadius="10" BorderBrush="#E9ECEF" BorderThickness="1" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock Text="当前昵称" FontSize="12" Foreground="#6C757D"/>
+                                <TextBlock Text="{Binding UserDisplayName}" FontSize="16" FontWeight="Bold" Foreground="#343A40" Margin="0,4,0,14"/>
+                                <TextBlock Text="设置新昵称" FontSize="12" Foreground="#6C757D"/>
+                                <TextBox Text="{Binding NewNickname, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,10"/>
+                                <Button Content="保存昵称" Style="{StaticResource PrimaryBtn}"
+                                        Command="{Binding UpdateNicknameCommand}" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Padding="16,14" Background="White" CornerRadius="10" BorderBrush="#E9ECEF" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="修改密码" FontWeight="Bold" FontSize="15" Foreground="#343A40" Margin="0,0,0,12"/>
+                                <TextBlock Text="原密码" FontSize="12" Foreground="#6C757D"/>
+                                <PasswordBox x:Name="OldPwdBox" Padding="8" Margin="0,4,0,8" PasswordChanged="OldPwd_PasswordChanged"/>
+                                <TextBlock Text="新密码（至少6位）" FontSize="12" Foreground="#6C757D"/>
+                                <PasswordBox x:Name="NewPwdBox" Padding="8" Margin="0,4,0,12" PasswordChanged="NewPwd_PasswordChanged"/>
+                                <Button Content="修改密码" Style="{StaticResource PrimaryBtn}"
+                                        Command="{Binding UpdatePasswordCommand}" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- ===== 管理员面板 ===== -->
+                <Grid Visibility="{Binding IsAdminPage, Converter={StaticResource BoolToVis}}" Margin="8">
+                    <TabControl>
+                        <TabItem Header="待审核用户">
+                            <Grid Margin="4">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Button Content="🔄 刷新" Style="{StaticResource PrimaryBtn}" Width="120"
+                                        Command="{Binding LoadPendingUsersCommand}"/>
+                                    <TextBlock VerticalAlignment="Center" Foreground="#6C757D" FontSize="12" Margin="12,0,0,0"
+                                               Text="{Binding PendingUsers.Count, StringFormat='共 {0} 条待审核'}" />
+                                </StackPanel>
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding PendingUsers}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="14,12" Margin="0,4" Background="White" CornerRadius="8"
+                                                        BorderBrush="#E9ECEF" BorderThickness="1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Nickname}" FontWeight="Bold" FontSize="15"/>
+                                                            <TextBlock Text="{Binding Username}" Foreground="#6C757D" FontSize="12" Margin="0,2,0,0"/>
+                                                            <TextBlock Text="{Binding CreatedAt, StringFormat='注册: {0:yyyy-MM-dd HH:mm}'}" FontSize="11" Foreground="#ADB5BD" Margin="0,2,0,0"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Button Content="✓ 通过" Style="{StaticResource PrimaryBtn}"
+                                                                    Command="{Binding DataContext.ApproveUserCommand,
+                                                                        RelativeSource={RelativeSource AncestorType=TabControl}}"
+                                                                    CommandParameter="{Binding Id}" Padding="14,7"/>
+                                                            <Button Content="✗ 拒绝" Foreground="#FA5252" Background="#FFF5F5"
+                                                                    BorderThickness="1" BorderBrush="#FFC9C9" Cursor="Hand"
+                                                                    Padding="14,7" Margin="8,0,0,0"
+                                                                    Command="{Binding DataContext.RejectUserCommand,
+                                                                        RelativeSource={RelativeSource AncestorType=TabControl}}"
+                                                                    CommandParameter="{Binding Id}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="所有用户">
+                            <Grid Margin="4">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Button Content="🔄 刷新" Style="{StaticResource PrimaryBtn}" Width="120"
+                                            Command="{Binding LoadAllUsersCommand}"/>
+                                    <TextBlock VerticalAlignment="Center" Foreground="#6C757D" FontSize="12" Margin="12,0,0,0"
+                                               Text="{Binding AllUsers.Count, StringFormat='共 {0} 个用户'}" />
+                                </StackPanel>
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding AllUsers}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="14,12" Margin="0,4" Background="White" CornerRadius="8"
+                                                        BorderBrush="#E9ECEF" BorderThickness="1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Nickname}" FontWeight="Bold" FontSize="15"/>
+                                                                <Border Padding="4,2" CornerRadius="4" Margin="8,0,0,0"
+                                                                        Background="{Binding Status, Converter={StaticResource OnlineColor}}">
+                                                                    <TextBlock FontSize="11" Foreground="White" Padding="2,0">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Setter Property="Text" Value="正常"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding Status}" Value="2">
+                                                                                        <Setter Property="Text" Value="封禁"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                </Border>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Username}" Foreground="#6C757D" FontSize="12" Margin="0,2,0,0"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <Button Content="🔒 封禁" Foreground="#FA5252" Background="#FFF5F5"
+                                                                    BorderThickness="1" BorderBrush="#FFC9C9" Cursor="Hand"
+                                                                    Padding="12,6" Margin="0,0,8,0" FontSize="12"
+                                                                    Command="{Binding DataContext.BanUserCommand,
+                                                                        RelativeSource={RelativeSource AncestorType=TabControl}}"
+                                                                    CommandParameter="{Binding Id}"/>
+                                                            <Button Content="🔓 解禁" Foreground="#2B8A3E" Background="#F0FFF4"
+                                                                    BorderThickness="1" BorderBrush="#B2F2BB" Cursor="Hand"
+                                                                    Padding="12,6" FontSize="12"
+                                                                    Command="{Binding DataContext.UnbanUserCommand,
+                                                                        RelativeSource={RelativeSource AncestorType=TabControl}}"
+                                                                    CommandParameter="{Binding Id}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="消息管理">
+                            <Grid Margin="4">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Grid Grid.Row="0" Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding AdminMsgKeyword, UpdateSourceTrigger=PropertyChanged}"
+                                             Padding="10,8" Margin="0,0,8,0"/>
+                                    <Button Grid.Column="1" Content="🔍 搜索" Style="{StaticResource PrimaryBtn}" Width="100"
+                                            Command="{Binding AdminSearchMessagesCommand}"/>
+                                </Grid>
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="查找范围: " VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,8,0"/>
+                                    <ComboBox SelectedIndex="{Binding AdminConvType}" Width="140" Padding="4">
+                                        <ComboBoxItem Content="全部消息"/>
+                                        <ComboBoxItem Content="指定用户"/>
+                                        <ComboBoxItem Content="指定群聊"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <Grid Grid.Row="2" Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                                Visibility="{Binding IsAdminConvUser, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="选择用户: " VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <ComboBox ItemsSource="{Binding AllUsers}"
+                                                  SelectedItem="{Binding AdminSelectedUser}"
+                                                  Width="200" Padding="6">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Nickname}" Margin="4"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                                Visibility="{Binding IsAdminConvGroup, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="选择群聊: " VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <ComboBox ItemsSource="{Binding AdminGroups}"
+                                                  SelectedItem="{Binding AdminSelectedGroup}"
+                                                  Width="200" Padding="6">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" Margin="4"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+                                <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding AdminMessages}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="14,10" Margin="0,3" Background="White" CornerRadius="8"
+                                                        BorderBrush="#E9ECEF" BorderThickness="1">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Border Padding="4,2" CornerRadius="4" Background="#E7F5FF">
+                                                                    <TextBlock Text="{Binding SenderNickname}" FontWeight="Bold" FontSize="12" Foreground="#1971C2"/>
+                                                                </Border>
+                                                                <TextBlock Text=" 在 " FontSize="11" Foreground="#ADB5BD" Margin="4,0"
+                                                                           Visibility="{Binding GroupName, Converter={StaticResource StrNotEmptyVis}}"/>
+                                                                <Border Padding="4,2" CornerRadius="4" Background="#FFF3E0"
+                                                                        Visibility="{Binding GroupName, Converter={StaticResource StrNotEmptyVis}}">
+                                                                    <TextBlock Text="{Binding GroupName}" FontSize="11" Foreground="#E65100"/>
+                                                                </Border>
+                                                                <TextBlock Text=" 发送给 " FontSize="11" Foreground="#ADB5BD" Margin="4,0"
+                                                                           Visibility="{Binding ReceiverNickname, Converter={StaticResource StrNotEmptyVis}}"/>
+                                                                <TextBlock Text="{Binding ReceiverNickname}" FontSize="12" Foreground="#6C757D"
+                                                                           Visibility="{Binding ReceiverNickname, Converter={StaticResource StrNotEmptyVis}}"/>
+                                                                <TextBlock Text="{Binding SentAt, StringFormat='  {0:yyyy-MM-dd HH:mm}'}" FontSize="11" Foreground="#ADB5BD" Margin="8,0,0,0"/>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Content}" FontSize="13" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1" Content="🗑" Foreground="#FA5252"
+                                                                Background="Transparent" BorderThickness="0" FontSize="14"
+                                                                Cursor="Hand" Padding="8,4"
+                                                                Command="{Binding DataContext.AdminDeleteMessageCommand,
+                                                                    RelativeSource={RelativeSource AncestorType=TabControl}}"
+                                                                CommandParameter="{Binding Id}"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
                 </Grid>
             </Grid>
         </Border>

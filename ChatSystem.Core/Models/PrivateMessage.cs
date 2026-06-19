@@ -28,7 +28,7 @@ public class PrivateMessage
 
     public bool IsDeleted { get; set; } = false;
 
-    public DateTime SentAt { get; set; } = DateTime.UtcNow;
+    public DateTime SentAt { get; set; } = DateTime.Now;
 
     // Navigation
     [ForeignKey(nameof(SenderId))]

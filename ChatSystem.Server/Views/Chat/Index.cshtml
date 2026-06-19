@@ -8,8 +8,8 @@
     #chatArea { flex: 1; display: flex; flex-direction: column; }
     #chatHeader { padding: 12px 16px; background: #f8f9fa; border-bottom: 1px solid #ddd; font-weight: bold; }
     #messageList { flex: 1; overflow-y: auto; padding: 16px; background: #f5f5f5; }
-    #inputArea { display: flex; padding: 12px; border-top: 1px solid #ddd; background: #fff; }
-    #inputArea input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-right: 10px; }
+    #inputArea { display: flex; padding: 12px; border-top: 1px solid #ddd; background: #fff; align-items: center; }
+    #inputArea input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-right: 10px; }
     #inputArea button { padding: 10px 24px; border-radius: 6px; }
 
     .contact-item { padding: 10px; cursor: pointer; border-radius: 6px; margin-bottom: 4px; display: flex; align-items: center; }
@@ -25,20 +25,31 @@
     .msg-sender { font-size: 0.8rem; margin-bottom: 2px; opacity: 0.85; }
     .msg-time { font-size: 0.7rem; text-align: right; margin-top: 4px; opacity: 0.7; }
     #typingIndicator { padding: 4px 16px; font-size: 0.8rem; color: #666; font-style: italic; }
+
+    .nav-tabs .nav-link { cursor: pointer; }
+    .file-upload-btn { background: none; border: 1px solid #ccc; border-radius: 6px; padding: 8px 12px; cursor: pointer; margin-right: 8px; font-size: 18px; }
+    .file-upload-btn:hover { background: #f0f0f0; }
+    .msg-delete-btn { font-size: 11px; color: #999; background: none; border: none; cursor: pointer; padding: 2px 6px; }
+    .msg-delete-btn:hover { color: #dc3545; }
 </style>
 
+<!-- 标签页切换 -->
+<ul class="nav nav-tabs mt-2" id="chatTabs">
+    <li class="nav-item"><a class="nav-link active" id="tabPrivate" onclick="switchTab('private')">💬 私聊</a></li>
+    <li class="nav-item"><a class="nav-link" id="tabGroup" onclick="switchTab('group')">👥 群聊</a></li>
+</ul>
+
 <div id="chatContainer">
-    <!-- 联系人列表 -->
-    <div id="contactList">
-        <h6 class="mb-3">好友列表</h6>
-        <div id="friendsList"></div>
-    </div>
+    <!-- 联系人/群组列表 -->
+    <div id="contactList"></div>
     <!-- 聊天区域 -->
     <div id="chatArea">
-        <div id="chatHeader">👋 请选择好友开始聊天</div>
+        <div id="chatHeader">👋 请选择好友或群组开始聊天</div>
         <div id="messageList"></div>
         <div id="typingIndicator" style="display:none;"></div>
         <div id="inputArea" style="display:none;">
+            <button class="file-upload-btn" id="fileUploadBtn" title="发送文件" onclick="document.getElementById('fileInput').click()">📎</button>
+            <input type="file" id="fileInput" style="display:none" onchange="uploadFile()">
             <input type="text" id="msgInput" placeholder="输入消息..." onkeydown="if(event.key==='Enter')sendMsg()">
             <button class="btn btn-primary" onclick="sendMsg()">发送</button>
         </div>
@@ -51,80 +62,177 @@
 // ===== 全局状态 =====
 var currentUser = null;
 var currentChatUserId = null;
+var currentGroupId = null;
 var connection = null;
 var friends = [];
+var groups = [];
 var onlineSet = new Set();
+var currentTab = 'private';
 
 // ===== 初始化 =====
 (function init() {
     var token = getToken();
     if (!token) { location.href = '/account/login'; return; }
 
-    // 解析JWT payload
     var payload = JSON.parse(atob(token.split('.')[1]));
     currentUser = { id: parseInt(payload.nameid), username: payload.unique_name, nickname: payload.nickname, role: parseInt(payload.role) };
 
-    // 启动SignalR连接
     connection = new signalR.HubConnectionBuilder()
         .withUrl("/hubs/chat", { accessTokenFactory: () => token })
         .withAutomaticReconnect()
         .build();
 
     connection.on("ReceivePrivateMessage", onReceiveMessage);
+    connection.on("ReceiveGroupMessage", onReceiveGroupMessage);
     connection.on("UserOnline", onUserOnline);
     connection.on("UserOffline", onUserOffline);
     connection.on("UserTyping", onUserTyping);
     connection.on("UserStopTyping", onUserStopTyping);
 
-    connection.start().then(loadFriends).catch(e => console.error(e));
+    connection.start().then(function() {
+        loadFriends();
+        loadGroups();
+    }).catch(function(e) { console.error(e); });
 })();
 
 function getToken() {
-    var c = document.cookie.split('; ').find(r => r.startsWith('AuthToken='));
+    var c = document.cookie.split('; ').find(function(r) { return r.startsWith('AuthToken='); });
     return c ? c.split('=')[1] : null;
+}
+
+function authHeaders() {
+    return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' };
+}
+
+// ===== 标签切换 =====
+function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tabPrivate').classList.toggle('active', tab === 'private');
+    document.getElementById('tabGroup').classList.toggle('active', tab === 'group');
+    currentChatUserId = null;
+    currentGroupId = null;
+    document.getElementById('chatHeader').textContent = tab === 'private' ? '👋 请选择好友开始聊天' : '👋 请选择群组开始聊天';
+    document.getElementById('messageList').innerHTML = '';
+    document.getElementById('inputArea').style.display = 'none';
+    if (tab === 'private') renderFriendsList();
+    else renderGroupsList();
 }
 
 // ===== 好友列表 =====
 function loadFriends() {
     fetch('/api/friends', { headers: authHeaders() })
-        .then(r => r.json()).then(d => {
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
             if (d.success) {
                 friends = d.data;
-                d.data.forEach(f => { if (f.isOnline) onlineSet.add(f.friendUserId); });
-                renderFriends();
+                d.data.forEach(function(f) { if (f.isOnline) onlineSet.add(f.friendUserId); });
+                renderFriendsList();
             }
         });
 }
 
-function renderFriends() {
-    var html = '';
-    friends.forEach(f => {
+function renderFriendsList() {
+    if (currentTab !== 'private') return;
+    var html = '<h6 class="mb-3">好友列表</h6>';
+    friends.forEach(function(f) {
         var online = onlineSet.has(f.friendUserId);
-        html += '<div class="contact-item" onclick="openChat(' + f.friendUserId + ',\'' + f.friendNickname + '\')" data-uid="' + f.friendUserId + '">';
+        html += '<div class="contact-item" onclick="openChat(' + f.friendUserId + ',\'' + escapeHtml(f.friendNickname) + '\')" data-uid="' + f.friendUserId + '">';
         html += '<span class="dot ' + (online ? 'online' : 'offline') + '"></span>';
-        html += '<span>' + f.friendNickname + ' (' + f.friendUsername + ')</span>';
+        html += '<span>' + escapeHtml(f.friendNickname) + ' (' + escapeHtml(f.friendUsername) + ')</span>';
         html += '</div>';
     });
-    document.getElementById('friendsList').innerHTML = html || '<p class="text-muted small">暂无好友</p>';
+    document.getElementById('contactList').innerHTML = html || '<p class="text-muted small">暂无好友</p>';
 }
 
-// ===== 打开聊天 =====
+// ===== 群组列表 =====
+function loadGroups() {
+    fetch('/api/groups', { headers: authHeaders() })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.success) {
+                groups = d.data;
+                renderGroupsList();
+            }
+        });
+}
+
+function renderGroupsList() {
+    if (currentTab !== 'group') return;
+    var html = '<h6 class="mb-3">我的群组</h6>';
+    groups.forEach(function(g) {
+        html += '<div class="contact-item" onclick="openGroupChat(' + g.id + ',\'' + escapeHtml(g.name) + '\')" data-gid="' + g.id + '">';
+        html += '<span>👥 ' + escapeHtml(g.name) + ' (' + g.memberCount + '人)</span>';
+        html += '</div>';
+    });
+    html += '<hr><div class="mt-2"><h6>创建群组</h6>';
+    html += '<div class="input-group"><input type="text" id="newGroupName" class="form-control form-control-sm" placeholder="群名称">';
+    html += '<button class="btn btn-sm btn-primary" onclick="createGroup()">创建</button></div></div>';
+    document.getElementById('contactList').innerHTML = html || '<p class="text-muted small">暂无群组</p>';
+}
+
+function createGroup() {
+    var name = document.getElementById('newGroupName').value.trim();
+    if (!name) return alert('请输入群名称');
+    fetch('/api/groups', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ name: name, memberIds: [] })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.success) { loadGroups(); document.getElementById('newGroupName').value = ''; }
+        else alert(d.message);
+    });
+}
+
+// ===== 打开私聊 =====
 function openChat(userId, name) {
+    currentTab = 'private';
     currentChatUserId = userId;
+    currentGroupId = null;
     document.getElementById('chatHeader').textContent = '💬 ' + name;
     document.getElementById('inputArea').style.display = 'flex';
+    document.getElementById('fileUploadBtn').style.display = 'inline-block';
     document.getElementById('messageList').innerHTML = '';
-    document.querySelectorAll('.contact-item').forEach(el => {
+    document.querySelectorAll('.contact-item').forEach(function(el) {
         el.classList.toggle('active', parseInt(el.dataset.uid) === userId);
     });
     loadHistory();
 }
 
+// ===== 打开群聊 =====
+function openGroupChat(groupId, name) {
+    currentTab = 'group';
+    currentGroupId = groupId;
+    currentChatUserId = null;
+    document.getElementById('chatHeader').textContent = '👥 ' + name;
+    document.getElementById('inputArea').style.display = 'flex';
+    document.getElementById('fileUploadBtn').style.display = 'none';
+    document.getElementById('messageList').innerHTML = '';
+    document.querySelectorAll('.contact-item').forEach(function(el) {
+        el.classList.toggle('active', parseInt(el.dataset.gid) === groupId);
+    });
+    loadGroupHistory();
+
+    // 加入群组SignalR组
+    if (connection && connection.state === 'Connected') {
+        connection.invoke("JoinGroup", groupId).catch(function(e) { console.error(e); });
+    }
+}
+
+// ===== 加载历史消息 =====
 function loadHistory() {
     fetch('/api/messages/private/' + currentChatUserId + '?page=1&pageSize=50', { headers: authHeaders() })
-        .then(r => r.json()).then(d => {
+        .then(function(r) { return r.json(); }).then(function(d) {
             if (d.success && d.data) {
-                d.data.items.reverse().forEach(msg => appendMessage(msg));
+                d.data.items.slice().reverse().forEach(function(msg) { appendMessage(msg); });
+            }
+        });
+}
+
+function loadGroupHistory() {
+    fetch('/api/groups/' + currentGroupId + '/messages?page=1&pageSize=50', { headers: authHeaders() })
+        .then(function(r) { return r.json(); }).then(function(d) {
+            if (d.success && d.data) {
+                d.data.forEach(function(msg) { appendGroupMessage(msg); });
             }
         });
 }
@@ -133,28 +241,51 @@ function loadHistory() {
 function sendMsg() {
     var input = document.getElementById('msgInput');
     var text = input.value.trim();
-    if (!text || !currentChatUserId) return;
+    if (!text) return;
     input.value = '';
 
-    connection.invoke("SendPrivateMessage", currentChatUserId, text).catch(err => console.error(err));
-    notification('UserStopTyping');
+    if (currentTab === 'private' && currentChatUserId) {
+        connection.invoke("SendPrivateMessage", currentChatUserId, text).catch(function(e) { console.error(e); });
+    } else if (currentTab === 'group' && currentGroupId) {
+        connection.invoke("SendGroupMessage", currentGroupId, text).catch(function(e) { console.error(e); });
+    }
+    if (currentTab === 'private') notifyStopTyping();
 }
 
-// ===== 接收消息 =====
+// ===== 接收私聊消息 =====
 function onReceiveMessage(msg) {
-    // 只显示与当前选中好友的聊天
     var relevantId = msg.senderId === currentUser.id ? msg.receiverId : msg.senderId;
-    if (currentChatUserId === relevantId) {
+    if (currentTab === 'private' && currentChatUserId === relevantId) {
         appendMessage(msg);
-    } else if (currentChatUserId !== msg.senderId) {
-        // TODO: 未读消息提示
     }
 }
 
 function appendMessage(msg) {
     var isMine = msg.senderId === currentUser.id;
     var html = '<div class="msg-bubble ' + (isMine ? 'mine' : 'other') + '">';
-    if (!isMine) html += '<div class="msg-sender">' + msg.senderNickname + '</div>';
+    if (!isMine) html += '<div class="msg-sender">' + escapeHtml(msg.senderNickname) + '</div>';
+    html += '<div>' + escapeHtml(msg.content) + '</div>';
+    html += '<div class="msg-time">' + new Date(msg.sentAt).toLocaleTimeString() + '</div>';
+    if (isMine) {
+        html += '<div><button class="msg-delete-btn" onclick="deleteMsg(' + msg.id + ')">删除</button></div>';
+    }
+    html += '</div>';
+    var container = document.getElementById('messageList');
+    container.innerHTML += html;
+    container.scrollTop = container.scrollHeight;
+}
+
+// ===== 接收群聊消息 =====
+function onReceiveGroupMessage(msg) {
+    if (currentTab === 'group' && currentGroupId === msg.groupId) {
+        appendGroupMessage(msg);
+    }
+}
+
+function appendGroupMessage(msg) {
+    var isMine = msg.senderId === currentUser.id;
+    var html = '<div class="msg-bubble ' + (isMine ? 'mine' : 'other') + '">';
+    html += '<div class="msg-sender">' + (isMine ? '我' : escapeHtml(msg.senderNickname)) + '</div>';
     html += '<div>' + escapeHtml(msg.content) + '</div>';
     html += '<div class="msg-time">' + new Date(msg.sentAt).toLocaleTimeString() + '</div>';
     html += '</div>';
@@ -163,45 +294,79 @@ function appendMessage(msg) {
     container.scrollTop = container.scrollHeight;
 }
 
+// ===== 删除消息 =====
+function deleteMsg(msgId) {
+    if (!confirm('确定删除此消息？')) return;
+    fetch('/api/messages/' + msgId, { method: 'DELETE', headers: authHeaders() })
+        .then(function(r) { return r.json(); }).then(function(d) {
+            if (d.success) {
+                // 重新加载当前聊天历史
+                if (currentChatUserId) loadHistory();
+            } else alert(d.message);
+        });
+}
+
+// ===== 文件上传 =====
+function uploadFile() {
+    var fileInput = document.getElementById('fileInput');
+    var file = fileInput.files[0];
+    if (!file || !currentChatUserId) return;
+
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('receiverId', currentChatUserId);
+
+    fetch('/api/messages/file', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + getToken() },
+        body: formData
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.success) {
+            appendMessage(d.data);
+        } else alert(d.message);
+    }).catch(function(e) { alert('上传失败'); });
+
+    fileInput.value = '';
+}
+
 // ===== 在线状态 =====
 function onUserOnline(user) {
     onlineSet.add(user.id);
-    renderFriends();
+    if (currentTab === 'private') renderFriendsList();
 }
 
 function onUserOffline(userId) {
     onlineSet.delete(userId);
-    renderFriends();
+    if (currentTab === 'private') renderFriendsList();
 }
 
 // ===== 打字状态 =====
 var typingTimer = null;
 document.getElementById('msgInput').addEventListener('input', function() {
-    if (!currentChatUserId) return;
+    if (currentTab !== 'private' || !currentChatUserId) return;
     connection.invoke("NotifyTyping", currentChatUserId);
     clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => connection.invoke("NotifyStopTyping", currentChatUserId), 2000);
+    typingTimer = setTimeout(function() { notifyStopTyping(); }, 2000);
 });
 
+function notifyStopTyping() {
+    if (currentChatUserId) connection.invoke("NotifyStopTyping", currentChatUserId);
+}
+
 function onUserTyping(userId) {
-    if (userId === currentChatUserId) {
-        var el = document.getElementById('typingIndicator');
-        el.textContent = '对方正在输入...';
-        el.style.display = 'block';
+    if (currentTab === 'private' && userId === currentChatUserId) {
+        document.getElementById('typingIndicator').textContent = '对方正在输入...';
+        document.getElementById('typingIndicator').style.display = 'block';
     }
 }
 
 function onUserStopTyping(userId) {
-    if (userId === currentChatUserId) {
+    if (currentTab === 'private' && userId === currentChatUserId) {
         document.getElementById('typingIndicator').style.display = 'none';
     }
 }
 
 // ===== 工具函数 =====
-function authHeaders() {
-    return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' };
-}
-
 function escapeHtml(text) {
     var d = document.createElement('div');
     d.textContent = text;

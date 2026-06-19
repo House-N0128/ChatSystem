@@ -41,6 +41,8 @@ public class MessagesController : ControllerBase
             SenderName = m.Sender?.Username ?? "",
             SenderNickname = m.Sender?.Nickname ?? "",
             ReceiverId = m.ReceiverId,
+            ReceiverName = m.Receiver?.Username ?? "",
+            ReceiverNickname = m.Receiver?.Nickname ?? "",
             Content = m.Content,
             MessageType = m.MessageType,
             FileName = m.FileName,
@@ -68,13 +70,13 @@ public class MessagesController : ControllerBase
     }
 
     [HttpPost("file")]
-    public async Task<IActionResult> UploadFile(int receiverId, IFormFile file)
+    public async Task<IActionResult> UploadFile([FromForm] int receiverId, [FromForm] IFormFile file)
     {
-        var (userId, _, _, _) = JwtHelper.ParseToken(User);
+        var (userId, username, nickname, _) = JwtHelper.ParseToken(User);
 
-        var maxSize = 10 * 1024 * 1024; // 10MB
+        var maxSize = 20 * 1024 * 1024; // 20MB
         if (file.Length > maxSize)
-            return Ok(ApiResponse.Fail("文件大小不能超过10MB"));
+            return Ok(ApiResponse.Fail("文件大小不能超过20MB"));
 
         var uploadDir = Path.Combine("wwwroot", "uploads");
         if (!Directory.Exists(uploadDir))
@@ -96,20 +98,29 @@ public class MessagesController : ControllerBase
             MessageType = MessageType.File,
             FileName = file.FileName,
             FilePath = $"/uploads/{fileName}",
-            SentAt = DateTime.UtcNow
+            SentAt = DateTime.Now
         };
         await _msgRepo.AddPrivateMessageAsync(msg);
 
-        return Ok(ApiResponse<MessageDTO>.Ok(new MessageDTO
+        var dto = new MessageDTO
         {
             Id = msg.Id,
             SenderId = msg.SenderId,
+            SenderName = username,
+            SenderNickname = nickname,
             ReceiverId = msg.ReceiverId,
             Content = msg.Content,
             MessageType = msg.MessageType,
             FileName = msg.FileName,
             FilePath = msg.FilePath,
             SentAt = msg.SentAt
-        }, "文件上传成功"));
+        };
+
+        // 通知接收方
+        await _hubContext.Clients.Group($"user:{receiverId}").SendAsync("ReceivePrivateMessage", dto);
+        // 通知发送方自己（多端同步）
+        await _hubContext.Clients.Group($"user:{userId}").SendAsync("ReceivePrivateMessage", dto);
+
+        return Ok(ApiResponse<MessageDTO>.Ok(dto, "文件上传成功"));
     }
 }

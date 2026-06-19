@@ -20,9 +20,15 @@ public class GroupMessage
 
     public MessageType MessageType { get; set; } = MessageType.Text;
 
+    [MaxLength(256)]
+    public string? FileName { get; set; }
+
+    [MaxLength(512)]
+    public string? FilePath { get; set; }
+
     public bool IsDeleted { get; set; } = false;
 
-    public DateTime SentAt { get; set; } = DateTime.UtcNow;
+    public DateTime SentAt { get; set; } = DateTime.Now;
 
     // Navigation
     [ForeignKey(nameof(GroupId))]

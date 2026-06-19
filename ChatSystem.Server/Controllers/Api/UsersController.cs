@@ -52,4 +52,37 @@ public class UsersController : ControllerBase
             CreatedAt = user.CreatedAt
         }));
     }
+
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDTO dto)
+    {
+        var (userId, _, _, _) = JwtHelper.ParseToken(User);
+        var user = await _userRepo.GetByIdAsync(userId);
+        if (user == null)
+            return Ok(ApiResponse.Fail("用户不存在"));
+
+        user.Nickname = dto.Nickname;
+        _userRepo.Update(user);
+        await _userRepo.SaveChangesAsync();
+
+        return Ok(ApiResponse.Ok("昵称已更新"));
+    }
+
+    [HttpPut("password")]
+    public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDTO dto)
+    {
+        var (userId, _, _, _) = JwtHelper.ParseToken(User);
+        var user = await _userRepo.GetByIdAsync(userId);
+        if (user == null)
+            return Ok(ApiResponse.Fail("用户不存在"));
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.OldPassword, user.PasswordHash))
+            return Ok(ApiResponse.Fail("原密码错误"));
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        _userRepo.Update(user);
+        await _userRepo.SaveChangesAsync();
+
+        return Ok(ApiResponse.Ok("密码已更新"));
+    }
 }

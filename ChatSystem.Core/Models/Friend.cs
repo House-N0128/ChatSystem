@@ -14,7 +14,7 @@ public class Friend
     [Required]
     public int FriendUserId { get; set; }
 
-    public DateTime AddedAt { get; set; } = DateTime.UtcNow;
+    public DateTime AddedAt { get; set; } = DateTime.Now;
 
     // Navigation
     [ForeignKey(nameof(UserId))]

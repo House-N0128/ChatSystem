@@ -10,6 +10,7 @@ public class SignalRService
 
     // 事件 — ViewModel 订阅
     public event Action<MessageDTO>? MessageReceived;
+    public event Action<GroupMessageDTO>? GroupMessageReceived;
     public event Action<FriendDTO>? FriendAdded;
     public event Action<int>? FriendRemoved;
     public event Action<FriendRequestDTO>? FriendRequestReceived;
@@ -21,6 +22,13 @@ public class SignalRService
     public async Task ConnectAsync(string serverUrl)
     {
         if (AuthService.AccessToken == null) return;
+
+        // 先断开旧连接
+        if (_connection != null)
+        {
+            await _connection.DisposeAsync();
+            _connection = null;
+        }
 
         _connection = new HubConnectionBuilder()
             .WithUrl($"{serverUrl}/hubs/chat", options =>
@@ -41,6 +49,9 @@ public class SignalRService
 
         _connection.On<MessageDTO>("ReceivePrivateMessage", msg =>
             System.Windows.Application.Current.Dispatcher.Invoke(() => MessageReceived?.Invoke(msg)));
+
+        _connection.On<GroupMessageDTO>("ReceiveGroupMessage", msg =>
+            System.Windows.Application.Current.Dispatcher.Invoke(() => GroupMessageReceived?.Invoke(msg)));
 
         _connection.On<FriendDTO>("FriendAdded", f =>
             System.Windows.Application.Current.Dispatcher.Invoke(() => FriendAdded?.Invoke(f)));
@@ -68,6 +79,24 @@ public class SignalRService
     {
         if (_connection?.State == HubConnectionState.Connected)
             await _connection.InvokeAsync("SendPrivateMessage", receiverId, content);
+    }
+
+    public async Task SendGroupMessageAsync(int groupId, string content)
+    {
+        if (_connection?.State == HubConnectionState.Connected)
+            await _connection.InvokeAsync("SendGroupMessage", groupId, content);
+    }
+
+    public async Task JoinGroupAsync(int groupId)
+    {
+        if (_connection?.State == HubConnectionState.Connected)
+            await _connection.InvokeAsync("JoinGroup", groupId);
+    }
+
+    public async Task LeaveGroupAsync(int groupId)
+    {
+        if (_connection?.State == HubConnectionState.Connected)
+            await _connection.InvokeAsync("LeaveGroup", groupId);
     }
 
     public async Task DisconnectAsync()

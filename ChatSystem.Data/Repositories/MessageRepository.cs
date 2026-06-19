@@ -22,9 +22,59 @@ public class MessageRepository : IMessageRepository
     {
         var query = _db.PrivateMessages
             .Include(m => m.Sender)
+            .Include(m => m.Receiver)
             .Where(m => !m.IsDeleted
                 && ((m.SenderId == userId1 && m.ReceiverId == userId2)
                  || (m.SenderId == userId2 && m.ReceiverId == userId1)))
+            .OrderByDescending(m => m.SentAt);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .OrderBy(m => m.SentAt)
+            .ToListAsync();
+
+        return new PagedResult<PrivateMessage>
+        {
+            TotalCount = total,
+            Page = page,
+            PageSize = pageSize,
+            Items = items
+        };
+    }
+
+    public async Task<PagedResult<PrivateMessage>> GetUserAllMessagesAsync(int userId, int page, int pageSize)
+    {
+        var query = _db.PrivateMessages
+            .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .Where(m => !m.IsDeleted
+                && (m.SenderId == userId || m.ReceiverId == userId))
+            .OrderByDescending(m => m.SentAt);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .OrderBy(m => m.SentAt)
+            .ToListAsync();
+
+        return new PagedResult<PrivateMessage>
+        {
+            TotalCount = total,
+            Page = page,
+            PageSize = pageSize,
+            Items = items
+        };
+    }
+
+    public async Task<PagedResult<PrivateMessage>> GetUserSentMessagesAsync(int userId, int page, int pageSize)
+    {
+        var query = _db.PrivateMessages
+            .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .Where(m => !m.IsDeleted && m.SenderId == userId)
             .OrderByDescending(m => m.SentAt);
 
         var total = await query.CountAsync();
@@ -69,6 +119,8 @@ public class MessageRepository : IMessageRepository
     {
         var query = _db.PrivateMessages
             .Include(m => m.Sender)
+            .Include(m => m.Receiver)
+            .Where(m => !m.IsDeleted)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(keyword))
@@ -88,7 +140,7 @@ public class MessageRepository : IMessageRepository
     public async Task<int> SearchAllMessagesCountAsync(
         string? keyword, DateTime? from, DateTime? to)
     {
-        var query = _db.PrivateMessages.AsQueryable();
+        var query = _db.PrivateMessages.Where(m => !m.IsDeleted).AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(keyword))
             query = query.Where(m => m.Content.Contains(keyword));

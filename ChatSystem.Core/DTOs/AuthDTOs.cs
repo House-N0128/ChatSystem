@@ -28,3 +28,18 @@ public class LoginResponseDTO
     public string Token { get; set; } = string.Empty;
     public UserDTO User { get; set; } = null!;
 }
+
+public class UpdateProfileDTO
+{
+    [Required, MaxLength(50)]
+    public string Nickname { get; set; } = string.Empty;
+}
+
+public class UpdatePasswordDTO
+{
+    [Required]
+    public string OldPassword { get; set; } = string.Empty;
+
+    [Required, MinLength(6), MaxLength(100)]
+    public string NewPassword { get; set; } = string.Empty;
+}

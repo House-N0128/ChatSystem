@@ -8,6 +8,7 @@
     <Window.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
         <converters:InverseBoolConverter x:Key="InverseBool"/>
+        <converters:StringNotEmptyToVisibilityConverter x:Key="StrNotEmptyVis"/>
     </Window.Resources>
 
     <Grid Margin="30">
@@ -24,15 +25,11 @@
                          PasswordChanged="PasswordBox_PasswordChanged"/>
 
             <TextBlock Text="{Binding ErrorMessage}" Foreground="Red" Margin="0,0,0,8"
-                       Visibility="{Binding ErrorMessage, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"/>
+                       Visibility="{Binding ErrorMessage, Converter={StaticResource StrNotEmptyVis}}"/>
 
             <Button Content="登 录" Style="{StaticResource PrimaryBtn}"
-                    Command="{Binding LoginCommand}" IsEnabled="{Binding CanLogin}"
+                    Command="{Binding LoginCommand}"
                     Visibility="{Binding IsLoggingIn, Converter={StaticResource InverseBool}}"/>
-
-            <TextBlock Text="登录中..." HorizontalAlignment="Center" Margin="0,8,0,0"
-                       Visibility="{Binding IsLoggingIn, Converter={StaticResource BoolToVis}}"
-                       Foreground="#666"/>
 
             <TextBlock HorizontalAlignment="Center" Margin="0,16,0,0">
                 <Hyperlink Command="{Binding GoRegisterCommand}">没有账号？立即注册</Hyperlink>

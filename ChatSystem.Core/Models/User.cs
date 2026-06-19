@@ -22,7 +22,7 @@ public class User
 
     public UserStatus Status { get; set; } = UserStatus.Pending;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     public DateTime? LastLoginAt { get; set; }
 

@@ -30,6 +30,8 @@ public class GroupMessageDTO
     public string SenderNickname { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public MessageType MessageType { get; set; }
+    public string? FileName { get; set; }
+    public string? FilePath { get; set; }
     public DateTime SentAt { get; set; }
 }
 

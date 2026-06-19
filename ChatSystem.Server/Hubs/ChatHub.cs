@@ -105,7 +105,7 @@ public class ChatHub : Hub
             ReceiverId = receiverId,
             Content = content,
             MessageType = MessageType.Text,
-            SentAt = DateTime.UtcNow
+            SentAt = DateTime.Now
         };
         await _msgRepo.AddPrivateMessageAsync(msg);
 
@@ -142,7 +142,7 @@ public class ChatHub : Hub
             SenderId = senderId,
             Content = content,
             MessageType = MessageType.Text,
-            SentAt = DateTime.UtcNow
+            SentAt = DateTime.Now
         };
         await _groupRepo.AddGroupMessageAsync(msg);
 

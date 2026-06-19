@@ -22,7 +22,7 @@ public class GroupRepository : IGroupRepository
             {
                 Group = group,
                 UserId = userId,
-                JoinedAt = DateTime.UtcNow
+                JoinedAt = DateTime.Now
             });
         }
         await _db.SaveChangesAsync();
@@ -35,12 +35,23 @@ public class GroupRepository : IGroupRepository
             .Include(g => g.Members).ThenInclude(m => m.User)
             .FirstOrDefaultAsync(g => g.Id == groupId);
 
-    public async Task<List<Group>> GetUserGroupsAsync(int userId)
-        => await _db.GroupMembers
-            .Where(gm => gm.UserId == userId)
-            .Include(gm => gm.Group)
-            .Select(gm => gm.Group!)
+    public async Task<List<Group>> GetAllGroupsAsync()
+        => await _db.Groups
+            .Include(g => g.Members)
+            .OrderBy(g => g.Name)
             .ToListAsync();
+
+    public async Task<List<Group>> GetUserGroupsAsync(int userId)
+    {
+        var groupIds = await _db.GroupMembers
+            .Where(gm => gm.UserId == userId)
+            .Select(gm => gm.GroupId)
+            .ToListAsync();
+        return await _db.Groups
+            .Include(g => g.Members)
+            .Where(g => groupIds.Contains(g.Id))
+            .ToListAsync();
+    }
 
     public async Task AddMemberAsync(int groupId, int userId)
     {
@@ -50,7 +61,7 @@ public class GroupRepository : IGroupRepository
             {
                 GroupId = groupId,
                 UserId = userId,
-                JoinedAt = DateTime.UtcNow
+                JoinedAt = DateTime.Now
             });
             await _db.SaveChangesAsync();
         }
@@ -86,6 +97,26 @@ public class GroupRepository : IGroupRepository
             .Take(pageSize)
             .OrderBy(m => m.SentAt)
             .ToListAsync();
+
+    public async Task SoftDeleteGroupMessageAsync(long messageId, int userId)
+    {
+        var msg = await _db.GroupMessages
+            .FirstOrDefaultAsync(m => m.Id == messageId && m.SenderId == userId);
+        if (msg != null)
+        {
+            msg.IsDeleted = true;
+            await _db.SaveChangesAsync();
+        }
+    }
+
+    public async Task<bool> DeleteGroupAsync(int groupId, int userId)
+    {
+        var group = await _db.Groups.Include(g => g.Members).FirstOrDefaultAsync(g => g.Id == groupId);
+        if (group == null || group.CreatorId != userId) return false;
+        _db.Groups.Remove(group);
+        await _db.SaveChangesAsync();
+        return true;
+    }
 
     public async Task SaveChangesAsync()
         => await _db.SaveChangesAsync();

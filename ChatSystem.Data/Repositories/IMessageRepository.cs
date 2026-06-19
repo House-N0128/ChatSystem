@@ -7,6 +7,8 @@ public interface IMessageRepository
 {
     Task<PrivateMessage> AddPrivateMessageAsync(PrivateMessage message);
     Task<PagedResult<PrivateMessage>> GetPrivateMessagesAsync(int userId1, int userId2, int page, int pageSize);
+    Task<PagedResult<PrivateMessage>> GetUserAllMessagesAsync(int userId, int page, int pageSize);
+    Task<PagedResult<PrivateMessage>> GetUserSentMessagesAsync(int userId, int page, int pageSize);
     Task SoftDeleteMessageAsync(long messageId, int userId);
     Task ForceDeleteMessageAsync(long messageId);
     Task<List<PrivateMessage>> SearchAllMessagesAsync(string? keyword, DateTime? from, DateTime? to, int page, int pageSize);

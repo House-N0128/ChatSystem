@@ -46,6 +46,9 @@ public class UserRepository : IUserRepository
     public void Update(User user)
         => _db.Users.Update(user);
 
+    public void Delete(User user)
+        => _db.Users.Remove(user);
+
     public async Task SaveChangesAsync()
         => await _db.SaveChangesAsync();
 }

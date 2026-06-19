@@ -27,7 +27,7 @@ public static class JwtHelper
             issuer: config["Jwt:Issuer"],
             audience: config["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(expireHours),
+            expires: DateTime.Now.AddHours(expireHours),
             signingCredentials: creds);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

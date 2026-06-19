@@ -5,6 +5,8 @@ using ChatSystem.Data.Repositories;
 using ChatSystem.Server.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using ChatSystem.Server.Hubs;
 
 namespace ChatSystem.Server.Controllers.Api;
 
@@ -14,10 +16,12 @@ namespace ChatSystem.Server.Controllers.Api;
 public class GroupsController : ControllerBase
 {
     private readonly IGroupRepository _groupRepo;
+    private readonly IHubContext<ChatHub> _hubContext;
 
-    public GroupsController(IGroupRepository groupRepo)
+    public GroupsController(IGroupRepository groupRepo, IHubContext<ChatHub> hubContext)
     {
         _groupRepo = groupRepo;
+        _hubContext = hubContext;
     }
 
     [HttpPost]
@@ -29,7 +33,7 @@ public class GroupsController : ControllerBase
         {
             Name = dto.Name,
             CreatorId = userId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         };
 
         var created = await _groupRepo.CreateGroupAsync(group, dto.MemberIds);
@@ -119,5 +123,82 @@ public class GroupsController : ControllerBase
         }).ToList();
 
         return Ok(ApiResponse<List<GroupMessageDTO>>.Ok(dtos));
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteGroup(int id)
+    {
+        var (userId, _, _, _) = JwtHelper.ParseToken(User);
+        var deleted = await _groupRepo.DeleteGroupAsync(id, userId);
+        return deleted ? Ok(ApiResponse.Ok("群聊已解散")) : Ok(ApiResponse.Fail("只有群主才能解散群聊"));
+    }
+
+    [HttpDelete("{groupId}/messages/{messageId}")]
+    public async Task<IActionResult> DeleteGroupMessage(int groupId, long messageId)
+    {
+        var (userId, _, _, _) = JwtHelper.ParseToken(User);
+        await _groupRepo.SoftDeleteGroupMessageAsync(messageId, userId);
+        return Ok(ApiResponse.Ok("消息已删除"));
+    }
+
+    [HttpPost("file")]
+    public async Task<IActionResult> UploadGroupFile([FromForm] int groupId, [FromForm] IFormFile file)
+    {
+        var (userId, username, nickname, _) = JwtHelper.ParseToken(User);
+
+        var maxSize = 20 * 1024 * 1024;
+        if (file.Length > maxSize)
+            return Ok(ApiResponse.Fail("文件大小不能超过20MB"));
+
+        var isMember = await _groupRepo.IsMemberAsync(groupId, userId);
+        if (!isMember)
+            return Ok(ApiResponse.Fail("你不是群成员"));
+
+        var uploadDir = Path.Combine("wwwroot", "uploads");
+        if (!Directory.Exists(uploadDir))
+            Directory.CreateDirectory(uploadDir);
+
+        var fileName = $"{Guid.NewGuid()}_{file.FileName}";
+        var filePath = Path.Combine(uploadDir, fileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+            await file.CopyToAsync(stream);
+
+        var msg = new GroupMessage
+        {
+            GroupId = groupId,
+            SenderId = userId,
+            Content = $"[文件] {file.FileName}",
+            MessageType = MessageType.File,
+            FileName = file.FileName,
+            FilePath = $"/uploads/{fileName}",
+            SentAt = DateTime.Now
+        };
+        await _groupRepo.AddGroupMessageAsync(msg);
+
+        // 通知群成员
+        var groupMsgDto = new GroupMessageDTO
+        {
+            Id = msg.Id, GroupId = msg.GroupId, SenderId = msg.SenderId,
+            SenderName = username, SenderNickname = nickname,
+            Content = msg.Content, MessageType = msg.MessageType,
+            FileName = msg.FileName, FilePath = msg.FilePath,
+            SentAt = msg.SentAt
+        };
+        await _hubContext.Clients.Group($"group:{groupId}").SendAsync("ReceiveGroupMessage", groupMsgDto);
+
+        return Ok(ApiResponse<GroupMessageDTO>.Ok(new GroupMessageDTO
+        {
+            Id = msg.Id,
+            GroupId = msg.GroupId,
+            SenderId = msg.SenderId,
+            SenderName = username,
+            SenderNickname = nickname,
+            Content = msg.Content,
+            MessageType = msg.MessageType,
+            FileName = msg.FileName,
+            FilePath = msg.FilePath,
+            SentAt = msg.SentAt
+        }, "文件上传成功"));
     }
 }

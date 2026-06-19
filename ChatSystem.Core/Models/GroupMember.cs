@@ -14,7 +14,7 @@ public class GroupMember
     [Required]
     public int UserId { get; set; }
 
-    public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+    public DateTime JoinedAt { get; set; } = DateTime.Now;
 
     // Navigation
     [ForeignKey(nameof(GroupId))]

@@ -12,5 +12,6 @@ public interface IUserRepository
     Task<int> GetTotalUserCountAsync();
     Task AddAsync(User user);
     void Update(User user);
+    void Delete(User user);
     Task SaveChangesAsync();
 }

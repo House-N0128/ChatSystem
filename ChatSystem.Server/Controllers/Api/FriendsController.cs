@@ -64,7 +64,7 @@ public class FriendsController : ControllerBase
             FromUserId = userId,
             ToUserId = dto.ToUserId,
             Status = FriendRequestStatus.Pending,
-            SentAt = DateTime.UtcNow
+            SentAt = DateTime.Now
         };
         await _friendRepo.AddFriendRequestAsync(request);
 

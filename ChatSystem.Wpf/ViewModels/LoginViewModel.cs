@@ -15,22 +15,38 @@ public class LoginViewModel : BaseViewModel
         _api = api;
         _signalR = signalR;
         _serverUrl = serverUrl;
-        LoginCommand = new RelayCommand(async _ => await LoginAsync(), _ => CanLogin);
+        LoginCommand = new RelayCommand(async _ => await LoginAsync());
         GoRegisterCommand = new RelayCommand(_ => OnNavigateToRegister?.Invoke());
     }
 
     private string _username = "";
-    public string Username { get => _username; set { SetField(ref _username, value); OnPropertyChanged(nameof(CanLogin)); } }
+    public string Username
+    {
+        get => _username;
+        set
+        {
+            SetField(ref _username, value);
+            OnPropertyChanged(nameof(CanLogin));
+        }
+    }
 
     private string _password = "";
-    public string Password { get => _password; set { SetField(ref _password, value); OnPropertyChanged(nameof(CanLogin)); } }
+    public string Password
+    {
+        get => _password;
+        set
+        {
+            SetField(ref _password, value);
+            OnPropertyChanged(nameof(CanLogin));
+        }
+    }
 
     private string _errorMessage = "";
     public string ErrorMessage { get => _errorMessage; set => SetField(ref _errorMessage, value); }
 
     public bool CanLogin => !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password);
 
-    public ICommand LoginCommand { get; }
+    public RelayCommand LoginCommand { get; }
     public ICommand GoRegisterCommand { get; }
     public event Action? OnNavigateToRegister;
 
@@ -40,6 +56,11 @@ public class LoginViewModel : BaseViewModel
     private async Task LoginAsync()
     {
         ErrorMessage = "";
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+        {
+            ErrorMessage = "请输入用户名和密码";
+            return;
+        }
         IsLoggingIn = true;
         try
         {

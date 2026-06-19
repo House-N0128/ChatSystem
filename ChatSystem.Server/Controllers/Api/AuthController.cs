@@ -35,7 +35,7 @@ public class AuthController : ControllerBase
             Nickname = dto.Nickname,
             Role = UserRole.User,
             Status = UserStatus.Pending,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         };
 
         await _userRepo.AddAsync(user);
@@ -60,7 +60,7 @@ public class AuthController : ControllerBase
         if (user.Status == UserStatus.Banned)
             return Ok(ApiResponse.Fail("账号已被封禁"));
 
-        user.LastLoginAt = DateTime.UtcNow;
+        user.LastLoginAt = DateTime.Now;
         _userRepo.Update(user);
         await _userRepo.SaveChangesAsync();
 

@@ -23,7 +23,7 @@ public class FriendRepository : IFriendRepository
     public async Task AddFriendAsync(int userId, int friendUserId)
     {
         // 双向插入
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         _db.Friends.Add(new Friend { UserId = userId, FriendUserId = friendUserId, AddedAt = now });
         _db.Friends.Add(new Friend { UserId = friendUserId, FriendUserId = userId, AddedAt = now });
         await _db.SaveChangesAsync();
@@ -77,12 +77,12 @@ public class FriendRepository : IFriendRepository
         if (request == null || request.Status != FriendRequestStatus.Pending) return;
 
         request.Status = FriendRequestStatus.Accepted;
-        request.RespondedAt = DateTime.UtcNow;
+        request.RespondedAt = DateTime.Now;
         _db.FriendRequests.Update(request);
 
         // 建立双向好友关系
-        _db.Friends.Add(new Friend { UserId = request.FromUserId, FriendUserId = request.ToUserId, AddedAt = DateTime.UtcNow });
-        _db.Friends.Add(new Friend { UserId = request.ToUserId, FriendUserId = request.FromUserId, AddedAt = DateTime.UtcNow });
+        _db.Friends.Add(new Friend { UserId = request.FromUserId, FriendUserId = request.ToUserId, AddedAt = DateTime.Now });
+        _db.Friends.Add(new Friend { UserId = request.ToUserId, FriendUserId = request.FromUserId, AddedAt = DateTime.Now });
 
         await _db.SaveChangesAsync();
     }
@@ -93,7 +93,7 @@ public class FriendRepository : IFriendRepository
         if (request == null || request.Status != FriendRequestStatus.Pending) return;
 
         request.Status = FriendRequestStatus.Rejected;
-        request.RespondedAt = DateTime.UtcNow;
+        request.RespondedAt = DateTime.Now;
         _db.FriendRequests.Update(request);
         await _db.SaveChangesAsync();
     }

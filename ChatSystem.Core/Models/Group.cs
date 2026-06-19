@@ -14,7 +14,7 @@ public class Group
     [Required]
     public int CreatorId { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     // Navigation
     [ForeignKey(nameof(CreatorId))]

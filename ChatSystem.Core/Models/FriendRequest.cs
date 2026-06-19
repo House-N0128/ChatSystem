@@ -17,7 +17,7 @@ public class FriendRequest
 
     public FriendRequestStatus Status { get; set; } = FriendRequestStatus.Pending;
 
-    public DateTime SentAt { get; set; } = DateTime.UtcNow;
+    public DateTime SentAt { get; set; } = DateTime.Now;
 
     public DateTime? RespondedAt { get; set; }
 
